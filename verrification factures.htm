@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Comparateur de Factures Excel</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+  <h1 class="text-2xl font-bold mb-6 text-center">🔍 Comparateur de Factures Excel</h1>
+
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow">
+    <label class="block font-semibold mb-2">📁 Fichier 1 (LLK TABOU.xlsx)</label>
+    <input type="file" id="file1" accept=".xlsx,.xls" class="mb-4 border p-2 w-full rounded">
+
+    <label class="block font-semibold mb-2">📁 Fichier 2 (Table des receptions.xls)</label>
+    <input type="file" id="file2" accept=".xlsx,.xls" class="mb-4 border p-2 w-full rounded">
+
+    <button onclick="compareFiles()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">
+      Comparer les factures
+    </button>
+
+    <button id="downloadBtn" onclick="downloadExcel()" class="hidden mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">
+      ⬇️ Télécharger le fichier Excel coloré
+    </button>
+  </div>
+
+  <div id="recap" class="max-w-2xl mx-auto mt-6 bg-white p-4 rounded-xl shadow hidden"></div>
+
+  <div id="result" class="max-w-2xl mx-auto mt-8"></div>
+
+  <script>
+    let comparedData = [];
+    let originalColumns = [];
+
+    async function readExcel(file) {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      return XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    }
+
+    async function compareFiles() {
+      const file1 = document.getElementById("file1").files[0];
+      const file2 = document.getElementById("file2").files[0];
+      if (!file1 || !file2) return alert("Veuillez sélectionner les deux fichiers Excel.");
+
+      const [data1, data2] = await Promise.all([readExcel(file1), readExcel(file2)]);
+
+      // Sauvegarder les noms de colonnes du premier fichier
+      originalColumns = Object.keys(data1[0] || {});
+
+      const factures2 = new Set(
+        data2.map(row => (row["Facture Frs"] || "").toString().trim())
+      );
+
+      comparedData = data1.map((row, i) => {
+        const facture = (row["No facture"] || "").toString().trim();
+        const numSansFCL = facture.replace(/^FCL/i, "");
+        const trouve = factures2.has(numSansFCL);
+        return { index: i + 1, trouve, ...row };
+      });
+
+      afficherTableau(comparedData);
+      afficherRecap(comparedData);
+      document.getElementById("downloadBtn").classList.remove("hidden");
+    }
+
+    function afficherRecap(data) {
+      const total = data.length;
+      const trouves = data.filter(r => r.trouve).length;
+      const nonTrouves = total - trouves;
+
+      const recapDiv = document.getElementById("recap");
+      recapDiv.classList.remove("hidden");
+      recapDiv.innerHTML = `
+        <h2 class="text-lg font-semibold mb-2 text-center">📊 Récapitulatif</h2>
+        <div class="grid grid-cols-3 text-center gap-4">
+          <div class="bg-blue-100 p-3 rounded-lg">
+            <div class="text-gray-600">Total vérifiés</div>
+            <div class="text-2xl font-bold">${total}</div>
+          </div>
+          <div class="bg-green-100 p-3 rounded-lg">
+            <div class="text-gray-600">Trouvés</div>
+            <div class="text-2xl font-bold text-green-700">${trouves}</div>
+          </div>
+          <div class="bg-red-100 p-3 rounded-lg">
+            <div class="text-gray-600">Non trouvés</div>
+            <div class="text-2xl font-bold text-red-700">${nonTrouves}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function afficherTableau(data) {
+      let html = `
+        <table class="table-auto border-collapse border border-gray-400 w-full mt-6 text-sm">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-400 p-2">#</th>
+              <th class="border border-gray-400 p-2">No facture</th>
+              <th class="border border-gray-400 p-2">Correspondance</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(row => {
+        html += `
+          <tr class="${row.trouve ? 'bg-green-200' : 'bg-red-50'}">
+            <td class="border border-gray-400 p-2 text-center">${row.index}</td>
+            <td class="border border-gray-400 p-2">${row["No facture"] || ''}</td>
+            <td class="border border-gray-400 p-2 text-center">${row.trouve ? '✅ Trouvé' : '❌ Non trouvé'}</td>
+          </tr>
+        `;
+      });
+
+      html += "</tbody></table>";
+      document.getElementById("result").innerHTML = html;
+    }
+
+    function downloadExcel() {
+      if (comparedData.length === 0) return alert("Aucune donnée à exporter.");
+
+      // On crée un tableau 2D contenant toutes les colonnes originales
+      const header = ["#", ...originalColumns];
+      const ws_data = [header];
+
+      comparedData.forEach(row => {
+        const line = [row.index];
+        originalColumns.forEach(col => line.push(row[col] || ""));
+        ws_data.push(line);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // Colorer les lignes trouvées
+      comparedData.forEach((row, i) => {
+        if (row.trouve) {
+          const startCol = 0;
+          for (let c = startCol; c < originalColumns.length + 1; c++) {
+            const cellRef = XLSX.utils.encode_cell({ r: i + 1, c });
+            if (!ws[cellRef]) continue;
+            if (!ws[cellRef].s) ws[cellRef].s = {};
+            ws[cellRef].s.fill = { fgColor: { rgb: "C6EFCE" } }; // Vert clair
+          }
+        }
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Factures colorées");
+      XLSX.writeFile(wb, "Factures_Colorées.xlsx");
+    }
+  </script>
+</body>
+</html>

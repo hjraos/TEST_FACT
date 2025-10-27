@@ -1,0 +1,266 @@
+﻿<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ordre de Virement — rempli</title>
+<style>
+  @page { size: A4; margin: 0; }
+  html,body{height:100%;margin:0;padding:12px;background:#efefef;font-family: Arial, "Cairo", sans-serif}
+  .sheet {
+    width:210mm;
+    height:297mm;
+    margin: 0 auto;
+    background: white;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    position:relative;
+  }
+
+  .bg-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    height: 148.5mm;
+    background: url('20251027_094012.jpg') no-repeat center top;
+    background-size: 210mm 148.5mm;
+  }
+
+  .fields {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    height: 148.5mm;
+    pointer-events: none;
+  }
+
+  .field {
+    position: absolute;
+    box-sizing: border-box;
+    pointer-events: auto;
+    border: none;
+    background: rgba(255,255,255,0);
+    font-size: 12px;
+    color: #000;
+    padding: 2px 4px;
+    resize: none;
+  }
+
+  .field.show-border {
+    border: 1px dashed rgba(0,0,0,0.25);
+    background: rgba(255,255,255,0.3);
+  }
+
+  .field input, .field textarea {
+    width:100%;
+    height:100%;
+    border:none;
+    background:transparent;
+    font-size:inherit;
+    font-family:inherit;
+    color:inherit;
+    padding:0;
+    margin:0;
+    resize:none;
+  }
+
+  .resizer {
+    position:absolute;
+    right:-3px; bottom:-3px;
+    width:8px; height:8px;
+    background:#0b76ef;
+    border-radius:50%;
+    cursor:se-resize;
+    display:none;
+  }
+
+  .field.show-border .resizer { display:block; }
+
+  .ui {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    z-index: 60;
+    display:flex;
+    gap:8px;
+  }
+  button {
+    background:#0b76ef;color:white;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;
+  }
+  .hint {
+    position:absolute; left:8px; top:8px; font-size:12px; color:#333;
+    background:rgba(255,255,255,0.9); padding:6px 8px; border-radius:6px; z-index:50;
+  }
+  @media print {
+    .ui,.hint,.resizer{display:none!important;}
+    .field {border:none!important;background:transparent!important;}
+    body{background:white;}
+    .sheet{box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+  <div class="sheet" id="sheet">
+    <div class="bg-area"></div>
+    <div class="fields" id="fields"></div>
+
+    <div class="ui">
+      <button id="editToggle">Edit positions</button>
+      <button id="printBtn">🖨️ Print</button>
+      <button id="saveJSON">Export pos</button>
+      <button id="loadJSON">Import pos</button>
+    </div>
+
+    <div class="hint" id="hint">Double-click a field to edit its value. Click "Edit positions" to move or resize.</div>
+  </div>
+
+<script>
+const fieldsConfig = [
+  { id:'agence', type:'text', label:'Agence', x:8, y:10, w:80, h:6 },
+  { id:'code', type:'text', label:'Code', x:150, y:10, w:50, h:6 },
+  { id:'nom', type:'text', label:'Nom du client', x:12, y:34, w:120, h:6 },
+  { id:'compte', type:'text', label:'Compte / RIB', x:135, y:34, w:62, h:6 },
+  { id:'montant', type:'text', label:'Montant', x:160, y:70, w:36, h:8 },
+  { id:'montant_total', type:'text', label:'Montant total', x:152, y:108, w:46, h:8 },
+  { id:'sommes_lettre', type:'textarea', label:'Sommes en lettres', x:12, y:96, w:130, h:12 },
+  { id:'date', type:'text', label:'Date', x:12, y:116, w:36, h:6 },
+  { id:'ville', type:'text', label:'Ville / Agence', x:56, y:116, w:56, h:6 },
+  { id:'beneficiaire', type:'textarea', label:'Bénéficiaire', x:12, y:52, w:78, h:10 },
+  { id:'objet', type:'textarea', label:'Objet', x:12, y:126, w:120, h:8 }
+];
+
+const fieldsEl=document.getElementById('fields');
+const fieldNodes={};
+function mmToPx(mm){const w=fieldsEl.getBoundingClientRect().width;return mm*(w/210);}
+function buildAll(){
+  fieldsEl.innerHTML='';
+  fieldsConfig.forEach(cfg=>{
+    const el=document.createElement('div');
+    el.className='field';
+    el.id=cfg.id;
+    el.style.left=mmToPx(cfg.x)+'px';
+    el.style.top=mmToPx(cfg.y)+'px';
+    el.style.width=mmToPx(cfg.w)+'px';
+    el.style.height=mmToPx(cfg.h)+'px';
+    el.dataset.x=cfg.x;el.dataset.y=cfg.y;el.dataset.w=cfg.w;el.dataset.h=cfg.h;
+    const ctrl=cfg.type==='textarea'?document.createElement('textarea'):document.createElement('input');
+    if(cfg.type!=='textarea') ctrl.type='text';
+    ctrl.placeholder=cfg.label;ctrl.value='';el.appendChild(ctrl);
+    const rs=document.createElement('div');rs.className='resizer';el.appendChild(rs);
+    fieldsEl.appendChild(el);
+    fieldNodes[cfg.id]=el;
+  });
+}
+buildAll();
+
+let editMode=false;
+document.getElementById('editToggle').onclick=()=>{editMode=!editMode;updateMode();}
+function updateMode(){
+  Object.values(fieldNodes).forEach(el=>{
+    if(editMode){
+      el.classList.add('show-border');
+      enableDrag(el);
+      enableResize(el);
+    }else{
+      el.classList.remove('show-border');
+      disableDrag(el);
+    }
+  });
+  document.getElementById('hint').textContent=editMode?
+  'Drag or resize fields. Click again to lock positions.':
+  'Double-click field to edit text. Click "Edit positions" to move or resize.';
+}
+
+/* Move */
+function enableDrag(el){
+  let down=false,sx,sy,sl,st;
+  el.addEventListener('mousedown',start);
+  function start(e){
+    if(!editMode||e.target.classList.contains('resizer'))return;
+    down=true;sx=e.clientX;sy=e.clientY;
+    sl=parseFloat(el.style.left);st=parseFloat(el.style.top);
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
+  }
+  function move(e){
+    if(!down)return;
+    el.style.left=sl+(e.clientX-sx)+'px';
+    el.style.top=st+(e.clientY-sy)+'px';
+  }
+  function up(){
+    down=false;document.removeEventListener('mousemove',move);
+    const ppm=fieldsEl.getBoundingClientRect().width/210;
+    el.dataset.x=(parseFloat(el.style.left)/ppm).toFixed(2);
+    el.dataset.y=(parseFloat(el.style.top)/ppm).toFixed(2);
+  }
+}
+function disableDrag(el){el.onmousedown=null;}
+
+/* Resize */
+function enableResize(el){
+  const r=el.querySelector('.resizer');
+  let resizing=false,sx,sy,sw,sh;
+  r.addEventListener('mousedown',e=>{
+    e.stopPropagation();resizing=true;sx=e.clientX;sy=e.clientY;
+    sw=parseFloat(el.style.width);sh=parseFloat(el.style.height);
+    document.addEventListener('mousemove',mm);
+    document.addEventListener('mouseup',mu);
+  });
+  function mm(e){
+    if(!resizing)return;
+    el.style.width=sw+(e.clientX-sx)+'px';
+    el.style.height=sh+(e.clientY-sy)+'px';
+  }
+  function mu(){
+    resizing=false;document.removeEventListener('mousemove',mm);
+    const ppm=fieldsEl.getBoundingClientRect().width/210;
+    el.dataset.w=(parseFloat(el.style.width)/ppm).toFixed(2);
+    el.dataset.h=(parseFloat(el.style.height)/ppm).toFixed(2);
+  }
+}
+
+/* Print */
+document.getElementById('printBtn').onclick=()=>{editMode=false;updateMode();window.print();};
+
+/* Export/import */
+document.getElementById('saveJSON').onclick=()=>{
+  const ppm=fieldsEl.getBoundingClientRect().width/210;
+  const arr=Object.keys(fieldNodes).map(id=>{
+    const el=fieldNodes[id],ctrl=el.querySelector('input,textarea');
+    return{
+      id,
+      x_mm:parseFloat(el.dataset.x||0),
+      y_mm:parseFloat(el.dataset.y||0),
+      w_mm:parseFloat(el.dataset.w||parseFloat(el.style.width)/ppm),
+      h_mm:parseFloat(el.dataset.h||parseFloat(el.style.height)/ppm),
+      value:ctrl.value
+    };
+  });
+  const blob=new Blob([JSON.stringify(arr,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='positions.json';a.click();
+};
+document.getElementById('loadJSON').onclick=()=>{
+  const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>{
+      const arr=JSON.parse(ev.target.result);
+      const ppm=fieldsEl.getBoundingClientRect().width/210;
+      arr.forEach(it=>{
+        const el=fieldNodes[it.id];if(!el)return;
+        el.style.left=(it.x_mm*ppm)+'px';
+        el.style.top=(it.y_mm*ppm)+'px';
+        el.style.width=(it.w_mm*ppm)+'px';
+        el.style.height=(it.h_mm*ppm)+'px';
+        el.dataset.x=it.x_mm;el.dataset.y=it.y_mm;
+        el.dataset.w=it.w_mm;el.dataset.h=it.h_mm;
+        const ctrl=el.querySelector('input,textarea');
+        if(ctrl)ctrl.value=it.value||'';
+      });
+    };
+    r.readAsText(f);
+  };i.click();
+};
+</script>
+</body>
+</html>

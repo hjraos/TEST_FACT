@@ -1,0 +1,273 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>فاتورة مبيعات</title>
+
+  <!-- ✅ Cairo font for Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- ✅ Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ✅ html2pdf library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Cairo", sans-serif;
+      background: #f8fafc;
+      color: #111;
+      direction: rtl;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .no-print {
+      background: none !important;
+      border: none !important;
+    }
+    .invoice-page {
+      background: white;
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="invoice-page">
+    <div class="text-center mb-4">
+      <h1 class="text-2xl font-bold">فاتورة مبيعات</h1>
+      <p>رقم الفاتورة: <span id="invoice-number"></span></p>
+      <p>التاريخ: <span id="invoice-date"></span></p>
+    </div>
+
+    <!-- ✅ Client Section -->
+    <div class="mb-4 border rounded p-3">
+      <label for="client-select" class="font-bold">الزبون:</label>
+      <select id="client-select" onchange="fillClientInfo()" class="border rounded p-1 mx-2">
+        <option value="">-- اختر زبوناً --</option>
+      </select>
+      <div id="client-name" class="font-semibold mt-2"></div>
+      <div id="client-address" class="text-sm"></div>
+      <div id="client-nif" class="text-sm text-gray-600"></div>
+    </div>
+
+    <!-- ✅ Items Table -->
+    <table class="mb-4">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="no-print">❌</th>
+          <th>المنتج</th>
+          <th>الوحدة</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>المجموع</th>
+        </tr>
+      </thead>
+      <tbody id="invoice-items"></tbody>
+    </table>
+
+    <div class="flex justify-between mb-2">
+      <button onclick="addRow()" class="bg-blue-600 text-white px-3 py-1 rounded no-print">➕ إضافة منتج</button>
+      <div>
+        <strong>المجموع الفرعي:</strong> <span id="sub-total-val">0</span> د.ج
+      </div>
+    </div>
+    <div class="flex justify-end mb-1">
+      <strong>الضريبة (TVA):</strong> &nbsp;<span id="tva-val">0</span> د.ج
+    </div>
+    <div class="flex justify-end mb-3 text-lg font-bold">
+      <strong>المجموع الكلي:</strong> &nbsp;<span id="grand-total-val">0</span> د.ج
+    </div>
+
+    <div class="mt-2">
+      <strong>المبلغ بالحروف:</strong>
+      <p id="amount-words-text" class="font-semibold text-blue-700"></p>
+    </div>
+
+    <div class="mt-6 flex gap-3 justify-center no-print">
+      <button onclick="window.print()" class="bg-green-600 text-white px-4 py-2 rounded">🖨️ طباعة</button>
+      <button onclick="savePDF()" class="bg-red-600 text-white px-4 py-2 rounded">💾 حفظ PDF</button>
+    </div>
+  </div>
+
+  <script>
+  const db = {
+    clients: [
+      { id: 1, company_name: "ش ذ م م غراب فوود حواس", english_name: "SARL GHORAB FOOD HAOUAS", address: "منطقة النشاط والايداع عين مليلة", nif: "002304040656913" },
+      { id: 2, company_name: "مؤسسة الأمل للتوزيع", english_name: "EURL EL AMAL DISTRIBUTION", address: "حي الإخوة بن شاعة، عنابة", nif: "001204040556812" }
+    ],
+    products: [
+      { id: 1, name: "زيت اليو 1 لتر", unit: "قارورة", price: 118.00 },
+      { id: 2, name: "زيت اليو 2 لتر", unit: "قارورة", price: 229.00 },
+      { id: 3, name: "زيت اليو 5 لتر", unit: "قارورة", price: 585.00 },
+      { id: 4, name: "سكر أبيض 1 كغ", unit: "كلغ", price: 84.00 },
+      { id: 5, name: "سكر أبيض 2 كغ", unit: "كلغ", price: 168.00 },
+      { id: 6, name: "سكر أبيض 5 كغ", unit: "كلغ", price: 420.00 }
+    ]
+  };
+
+  function populateClientSelect() {
+    const select = document.getElementById("client-select");
+    db.clients.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.company_name;
+      select.appendChild(opt);
+    });
+  }
+
+  function fillClientInfo() {
+    const id = document.getElementById("client-select").value;
+    const c = db.clients.find(x => x.id == id);
+    if (!c) return;
+    document.getElementById("client-name").textContent = `${c.company_name} (${c.english_name})`;
+    document.getElementById("client-address").textContent = c.address;
+    document.getElementById("client-nif").textContent = c.nif;
+  }
+
+  function addRow() {
+    const tb = document.getElementById("invoice-items");
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="no-print"><button onclick="this.closest('tr').remove(); calculateTotals();" class="bg-red-600 text-white px-2 py-1 rounded text-xs">✖</button></td>
+      <td>
+        <select class="border rounded p-1 text-sm w-full no-print" onchange="selectProduct(this)">
+          <option value="">-- اختر منتجاً --</option>
+          ${db.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+        <span class="product-name"></span>
+      </td>
+      <td class="product-unit">-</td>
+      <td contenteditable="true" data-type="qty" oninput="calculateRow(this)">1</td>
+      <td contenteditable="true" data-type="price" oninput="calculateRow(this)">0</td>
+      <td class="item-total font-bold text-left">0 د.ج</td>`;
+    tb.appendChild(tr);
+  }
+
+  function selectProduct(select) {
+    const row = select.closest("tr");
+    const p = db.products.find(x => x.id == select.value);
+    const span = row.querySelector(".product-name");
+    const unitCell = row.querySelector(".product-unit");
+    const priceCell = row.querySelector('[data-type="price"]');
+    if (!p) {
+      span.textContent = "";
+      unitCell.textContent = "-";
+      priceCell.textContent = "0";
+      calculateRow(priceCell);
+      return;
+    }
+    span.textContent = p.name;
+    unitCell.textContent = p.unit;
+    priceCell.textContent = p.price.toFixed(2);
+    calculateRow(priceCell);
+  }
+
+  function cleanNumber(v) { return parseFloat((v+'').replace(/[^0-9.]/g, '')) || 0; }
+  function formatCurrency(a) { return a.toLocaleString('fr-DZ',{minimumFractionDigits:2}); }
+
+  function calculateRow(el) {
+    const r = el.closest("tr");
+    const q = cleanNumber(r.querySelector('[data-type="qty"]').textContent);
+    const p = cleanNumber(r.querySelector('[data-type="price"]').textContent);
+    r.querySelector(".item-total").textContent = formatCurrency(q * p) + " د.ج";
+    calculateTotals();
+  }
+
+  function numberToArabicWords(num) {
+    if (num === 0) return "صفر دينار جزائري";
+    const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
+    const teens = ["عشرة", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
+    const tens = ["", "", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
+    const hundreds = ["", "مائة", "مائتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
+    function under100(n) {
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      const t = Math.floor(n / 10);
+      const o = n % 10;
+      return o ? `${ones[o]} و ${tens[t]}` : tens[t];
+    }
+    function under1000(n) {
+      if (n === 0) return "";
+      const h = Math.floor(n / 100);
+      const r = n % 100;
+      let parts = [];
+      if (h > 0) parts.push(hundreds[h]);
+      if (r > 0) parts.push(under100(r));
+      return parts.join(" و ");
+    }
+    const millions = Math.floor(num / 1_000_000);
+    const thousands = Math.floor((num % 1_000_000) / 1000);
+    const rest = num % 1000;
+    let words = "";
+    if (millions > 0) {
+      if (millions === 1) words = "مليون";
+      else if (millions === 2) words = "مليونان";
+      else if (millions >= 3 && millions <= 10) words = under1000(millions) + " ملايين";
+      else words = under1000(millions) + " مليون";
+    }
+    if (thousands > 0) {
+      if (thousands === 1) words += (words ? " و " : "") + "ألف";
+      else if (thousands === 2) words += (words ? " و " : "") + "ألفان";
+      else if (thousands >= 3 && thousands <= 10) words += (words ? " و " : "") + under1000(thousands) + " آلاف";
+      else words += (words ? " و " : "") + under1000(thousands) + " ألف";
+    }
+    if (rest > 0) words += (words ? " و " : "") + under1000(rest);
+    return words + " دينار جزائري";
+  }
+
+  function calculateTotals() {
+    let subtotal = 0;
+    document.querySelectorAll(".item-total").forEach(td => subtotal += cleanNumber(td.textContent));
+    const tva = subtotal * 0.0;
+    const total = subtotal + tva;
+    document.getElementById("sub-total-val").textContent = formatCurrency(subtotal);
+    document.getElementById("tva-val").textContent = formatCurrency(tva);
+    document.getElementById("grand-total-val").textContent = formatCurrency(total);
+    document.getElementById("amount-words-text").textContent = numberToArabicWords(Math.round(total));
+  }
+
+  function generateInvoiceInfo() {
+    const num = Math.floor(Math.random() * 9000 + 1000);
+    document.getElementById("invoice-number").textContent = num + "/" + new Date().getFullYear();
+    document.getElementById("invoice-date").textContent = new Date().toLocaleDateString('ar-DZ');
+  }
+
+  // ✅ Fixed Arabic PDF Export
+  function savePDF() {
+    const invoiceNumber = document.getElementById("invoice-number").textContent || "0000";
+    const element = document.querySelector(".invoice-page");
+    element.style.background = "#fff";
+    element.style.direction = "rtl";
+    element.style.fontFamily = "'Cairo', sans-serif";
+    const opt = {
+      margin: [5,5,5,5],
+      filename: `فاتورة_${invoiceNumber}.pdf`,
+      image: { type: "jpeg", quality: 1 },
+      html2canvas: { scale: 3, useCORS: true, letterRendering: true, scrollY: 0, backgroundColor: "#fff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+    };
+    html2pdf().set(opt).from(element).save().then(()=> element.style.background="");
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    populateClientSelect();
+    generateInvoiceInfo();
+    addRow();
+  });
+  </script>
+</body>
+</html>

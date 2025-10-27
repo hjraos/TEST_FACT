@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فاتورة مبيعات</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: "Cairo", sans-serif;
+      background: #f3f4f6;
+      color: #000;
+    }
+
+    .invoice-page {
+      width: 210mm;
+      min-height: 297mm;
+      background: #fff;
+      margin: 15mm auto;
+      padding: 15mm;
+      border: 1px solid #000;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .company-header {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    .company-header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      text-decoration: underline;
+    }
+
+    .company-header p {
+      font-size: 13px;
+      margin: 2px 0;
+    }
+
+    .invoice-header {
+      text-align: center;
+      font-weight: 700;
+      border-top: 1px solid #000;
+      border-bottom: 1px solid #000;
+      padding: 4px;
+      display: inline-block;
+      margin: 10px 0;
+    }
+
+    .section-box {
+      border: 1px solid #000;
+      padding: 6px 10px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .section-box2 {
+      padding: 0px 0px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-weight: bold;
+      font-size: 13px;
+      border-bottom: 1px solid #000;
+      margin-bottom: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    th, td {
+      border: 1px solid #000;
+      padding: 4px;
+      text-align: center;
+    }
+
+    th {
+      background: #f9f9f9;
+      font-weight: bold;
+    }
+
+    .totals-box {
+      width: 60%;
+      float: left;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      border: 1px solid #000;
+      border-radius: 4px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .totals-table {
+      width: 100%;
+      border-collapse: collapse;
+      direction: rtl;
+    }
+
+    .totals-table td {
+      padding: 4px 8px;
+      border: none;
+    }
+
+    .totals-table .amount {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .totals-table .label {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .totals-table .total .label,
+    .totals-table .total .amount {
+      font-weight: 700;
+      border-top: 1px solid #000;
+      padding-top: 5px;
+    }
+
+    .amount-words {
+      clear: both;
+      border-top: 1px dashed #000;
+      padding-top: 6px;
+      font-size: 12px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+
+    .signature {
+      margin-top: 50px;
+      font-size: 12px;
+      text-align: center;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .sig-box { width: 40%; }
+    .sig-line { border-top: 1px solid #000; margin-top: 25px; }
+
+    @media print {
+      body { background: #fff; margin: 0; font-size: 12px; }
+      .invoice-page {
+        width: 200mm !important;
+        min-height: 287mm !important;
+        margin: 0 auto !important;
+        padding: 5mm !important;
+        border: 0 !important;
+        box-shadow: none !important;
+      }
+      .no-print { display: none !important; }
+      @page { size: A4; margin: 2mm; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="invoice-page" id="invoice">
+    <div class="company-header">
+      <h1>طــــبــــــــــــــــــو كــمـــــــــــــــــــال</h1>
+      <p>تـجــارة بالجـمـلة للمـنتجــات المـرتــبطـة بتـغـذية الإنـســـــان</p>
+      <p>العنوان: الطارفة محل رقم 01 بني والبان</p>
+      <p>الرقم الجبائي: 184210105292140 | الإحصائي: 198421010529240</p>
+      <p>السجل التجاري: 12أ0758272-02/21 | رقم المادة: 21210460081</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="section-box">
+        <p>فاتورة رقم : <span id="invoice-number"></span></p>
+        <p>التاريخ: <span id="invoice-date"></span></p>
+      </div>
+
+      <div class="section-box">
+        <select id="client-select" onchange="fillClientInfo()" class="border rounded p-1 text-sm w-full mb-2 no-print">
+          <option value="">-- اختر زبوناً --</option>
+        </select>
+        <p><strong id="client-name">اسم الزبون</strong></p>
+        <p>العنوان: <span id="client-address">العنوان هنا</span></p>
+        <p>الرقم الجبائي: <span id="client-nif">000000000000000</span></p>
+      </div>
+    </div>
+
+    <div class="section-box2">
+      <table>
+        <thead>
+          <tr>
+            <th class="no-print">حذف</th>
+            <th>المنتج</th>
+            <th>الوحدة</th>
+            <th>الكمية</th>
+            <th>سعر الوحدة</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody id="invoice-items"></tbody>
+      </table>
+
+      <div class="no-print mt-3">
+        <button onclick="addRow()" class="bg-emerald-600 text-white px-4 py-2 rounded">+ إضافة منتج</button>
+      </div>
+    </div>
+
+    <div class="totals-box">
+      <table class="totals-table">
+        <tr>
+          <td class="amount" id="sub-total-val">0,00</td>
+          <td class="label">المـجمـوع خارج الرسم</td>
+        </tr>
+        <tr>
+          <td class="amount" id="tva-val">0,00</td>
+          <td class="label">الرسم على القيمة المضافة</td>
+        </tr>
+        <tr>
+          <td class="amount">0,00</td>
+          <td class="label">ضريبة الطابع</td>
+        </tr>
+        <tr class="total">
+          <td class="amount" id="grand-total-val">0,00</td>
+          <td class="label">المجموع بكل الرسوم</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="amount-words">
+      <strong>أوقفت الفاتورة على مبلغ:</strong> <span id="amount-words-text">صفر دينار جزائري</span>
+    </div>
+
+    <div class="amount-words-text">
+      <strong>طريقة التسديد :</strong> شيك بنكي
+    </div>
+
+    <div class="signature">
+      <div class="sig-box">
+        <div>الختــــــــــــــم والامضــــــــــاء</div>
+      </div>
+    </div>
+
+    <div class="no-print flex justify-between mt-8">
+      <div class="flex gap-2">
+        <button onclick="addRow()" class="bg-teal-600 text-white px-4 py-2 rounded">➕ منتج</button>
+        <button onclick="window.location.reload()" class="bg-gray-600 text-white px-4 py-2 rounded">🧾 فاتورة جديدة</button>
+        <button onclick="savePDF()" class="bg-blue-600 text-white px-4 py-2 rounded">📥 حفظ PDF</button>
+      </div>
+      <button onclick="window.print()" class="bg-red-600 text-white px-4 py-2 rounded">🖨️ طباعة</button>
+    </div>
+  </div>
+
+
+  <!-- html2pdf library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+const db = {
+  clients: [
+    { id: 1, company_name: "ش ذ م م غراب فوود حواس", english_name: "SARL GHORAB FOOD HAOUAS", address: "منطقة النشاط والايداع عين مليلة", nif: "002304040656913" },
+    { id: 2, company_name: "مؤسسة الأمل للتوزيع", english_name: "EURL EL AMAL DISTRIBUTION", address: "حي الإخوة بن شاعة، عنابة", nif: "001204040556812" }
+  ],
+  products: [
+    { id: 1, name: "زيت اليو 1 لتر", unit: "قارورة", price: 118.00 },
+    { id: 2, name: "زيت اليو 2 لتر", unit: "قارورة", price: 229.00 },
+    { id: 3, name: "زيت اليو 5 لتر", unit: "قارورة", price: 585.00 },
+    { id: 4, name: "سكر أبيض 1 كغ", unit: "كلغ", price: 84.00 },
+    { id: 5, name: "سكر أبيض 2 كغ", unit: "كلغ", price: 168.00 },
+    { id: 6, name: "سكر أبيض 5 كغ", unit: "كلغ", price: 420.00 }
+  ]
+};
+
+// 🧩 Fill the clients dropdown
+function populateClientSelect() {
+  const select = document.getElementById("client-select");
+  db.clients.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.company_name;
+    select.appendChild(opt);
+  });
+}
+
+// 🧩 When selecting a client, fill info
+function fillClientInfo() {
+  const id = document.getElementById("client-select").value;
+  const c = db.clients.find(x => x.id == id);
+  if (!c) return;
+  document.getElementById("client-name").textContent = `${c.company_name} (${c.english_name})`;
+  document.getElementById("client-address").textContent = c.address;
+  document.getElementById("client-nif").textContent = c.nif;
+}
+
+// 🧩 Add a product row
+function addRow() {
+  const tb = document.getElementById("invoice-items");
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td class="no-print">
+      <button onclick="this.closest('tr').remove(); calculateTotals();" class="bg-red-600 text-white px-2 py-1 rounded text-xs">✖</button>
+    </td>
+    <td>
+      <select class="border rounded p-1 text-sm w-full no-print" onchange="selectProduct(this)">
+        <option value="">-- اختر منتجاً --</option>
+        ${db.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <span class="product-name"></span>
+    </td>
+    <td class="product-unit">-</td>
+    <td contenteditable="true" data-type="qty" oninput="calculateRow(this)">1</td>
+    <td contenteditable="true" data-type="price" oninput="calculateRow(this)">0</td>
+    <td class="item-total font-bold text-left">0 د.ج</td>
+  `;
+  tb.appendChild(tr);
+}
+
+// 🧩 When selecting a product
+function selectProduct(select) {
+  const row = select.closest("tr");
+  const p = db.products.find(x => x.id == select.value);
+  const span = row.querySelector(".product-name");
+  const unitCell = row.querySelector(".product-unit");
+  const priceCell = row.querySelector('[data-type="price"]');
+  if (!p) {
+    span.textContent = "";
+    unitCell.textContent = "-";
+    priceCell.textContent = "0";
+    calculateRow(priceCell);
+    return;
+  }
+  span.textContent = p.name;
+  unitCell.textContent = p.unit;
+  priceCell.textContent = p.price.toFixed(2);
+  calculateRow(priceCell);
+}
+
+// 🧮 Helpers
+function cleanNumber(v) { return parseFloat((v+'').replace(/[^0-9.]/g, '')) || 0; }
+function formatCurrency(a) { return a.toLocaleString('fr-DZ',{minimumFractionDigits:2}); }
+
+function calculateRow(el) {
+  const r = el.closest("tr");
+  const q = cleanNumber(r.querySelector('[data-type="qty"]').textContent);
+  const p = cleanNumber(r.querySelector('[data-type="price"]').textContent);
+  r.querySelector(".item-total").textContent = formatCurrency(q * p) + " د.ج";
+  calculateTotals();
+}
+
+function numberToArabicWords(num) {
+  if (num === 0) return "صفر دينار جزائري";
+  const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
+  const teens = ["عشرة", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
+  const tens = ["", "", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
+  const hundreds = ["", "مائة", "مائتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
+  function under100(n) {
+    if (n < 10) return ones[n];
+    if (n < 20) return teens[n - 10];
+    const t = Math.floor(n / 10);
+    const o = n % 10;
+    return o ? `${ones[o]} و ${tens[t]}` : tens[t];
+  }
+  function under1000(n) {
+    if (n === 0) return "";
+    const h = Math.floor(n / 100);
+    const r = n % 100;
+    let parts = [];
+    if (h > 0) parts.push(hundreds[h]);
+    if (r > 0) parts.push(under100(r));
+    return parts.join(" و ");
+  }
+  const millions = Math.floor(num / 1_000_000);
+  const thousands = Math.floor((num % 1_000_000) / 1000);
+  const rest = num % 1000;
+  let words = "";
+  if (millions > 0) {
+    if (millions === 1) words = "مليون";
+    else if (millions === 2) words = "مليونان";
+    else if (millions >= 3 && millions <= 10) words = under1000(millions) + " ملايين";
+    else words = under1000(millions) + " مليون";
+  }
+  if (thousands > 0) {
+    if (thousands === 1) words += (words ? " و " : "") + "ألف";
+    else if (thousands === 2) words += (words ? " و " : "") + "ألفان";
+    else if (thousands >= 3 && thousands <= 10) words += (words ? " و " : "") + under1000(thousands) + " آلاف";
+    else words += (words ? " و " : "") + under1000(thousands) + " ألف";
+  }
+  if (rest > 0) words += (words ? " و " : "") + under1000(rest);
+  return words + " دينار جزائري";
+}
+
+function calculateTotals() {
+  let subtotal = 0;
+  document.querySelectorAll(".item-total").forEach(td => subtotal += cleanNumber(td.textContent));
+  const tva = subtotal * 0.0;
+  const total = subtotal + tva;
+  document.getElementById("sub-total-val").textContent = formatCurrency(subtotal);
+  document.getElementById("tva-val").textContent = formatCurrency(tva);
+  document.getElementById("grand-total-val").textContent = formatCurrency(total);
+  document.getElementById("amount-words-text").textContent = numberToArabicWords(Math.round(total));
+}
+
+function generateInvoiceInfo() {
+  const num = Math.floor(Math.random() * 9000 + 1000);
+  document.getElementById("invoice-number").textContent = num + "/" + new Date().getFullYear();
+  document.getElementById("invoice-date").textContent = new Date().toLocaleDateString('ar-DZ');
+}
+
+// 🧾 Save PDF
+function savePDF() {
+  const invoiceNumber = document.getElementById("invoice-number").textContent || "0000";
+  const element = document.querySelector(".invoice-page");
+
+  const opt = {
+    margin: 0.5,
+    filename: `فاتورة_${invoiceNumber}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().from(element).set(opt).save();
+}
+
+// ✅ Initialize everything on page load
+window.addEventListener("DOMContentLoaded", () => {
+  populateClientSelect();
+  generateInvoiceInfo();
+  addRow(); // start with one row by default
+});
+</script>
+</body>
+</html>   
