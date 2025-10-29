@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bon de Commande</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 30px;
+      
+    }
+    .page {
+      background: white;
+      max-width: 850px;
+      margin: auto;
+      padding: 40px 50px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+    }
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 25px;
+      text-transform: uppercase;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    th {
+      background: #f2f2f2;
+      font-weight: 600;
+    }
+    input, select {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      text-align: center;
+      width: 100%;
+    }
+    select {
+      appearance: none;
+      border-bottom: 1px solid #ccc;
+      background-color: white;
+      border-radius: 4px;
+      padding: 2px;
+    }
+    .btns {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .btns button {
+      background: #2563eb;
+      color: white;
+      padding: 8px 18px;
+      border-radius: 6px;
+      margin: 4px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s;
+    }
+    .btns button:hover {
+      background: #1e40af;
+    }
+    @media print {
+      .btns,
+      th:last-child,
+      td:last-child,
+      #clientSelect,
+      label[for="clientSelect"] { display: none; }
+
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; padding: 0;padding-top:70px; }
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .inline-input {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+    .inline-input label {
+      font-weight: 600;
+    }
+    .inline-input input {
+      width: 100px;
+      text-align: center;
+    }
+    .left-align {
+      justify-content: flex-start;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <h1><strong>BON DE COMMANDE</strong></h1>
+
+  <div class="header">
+    <div>
+      <select id="clientSelect" onchange="changerFournisseur()" style="border:1px solid #ccc; padding:3px 6px; border-radius:4px;">
+        <option value="kamel">TABBOU KAMEL</option>
+        <option value="abdellah">TABBOU ABDELLAH</option>
+      </select>
+
+      <div id="infoFournisseur" style="margin-top:8px; line-height:1.5;">
+        <strong>TABBOU KAMEL</strong><br>
+        cité tafrala lot n°01 beni oulbene skikda<br>
+        N° Register : 12 A 0758272<br>
+        ID Fiscal : 184210105292140<br>
+        N° Article Impôt : 21210460081
+      </div>
+    </div>
+
+    <div>
+      <strong>SPA CEVITAL</strong><br>
+      <div class="inline-input left-align">
+        <label>Bon de commande N° :</label>
+        <input value="242/2025" />
+      </div>
+      <div class="inline-input left-align">
+        <label>Date :</label>
+        <input value="28/10/2025" />
+      </div>
+    </div>
+  </div>
+
+  <table id="table">
+    <thead>
+      <tr>
+        <th style="width:25%">Code produit</th>
+        <th style="width:45%">Désignation</th>
+        <th style="width:10%">Quantité</th>
+        <th style="width:15%">Un.</th>
+        <th style="width:10%">Suppr</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="btns">
+    <button onclick="addRow()">Ajouter ligne</button>
+    <button onclick="window.print()">Imprimer / PDF</button>
+  </div>
+
+</div>
+
+<script>
+function changerFournisseur() {
+  const select = document.getElementById("clientSelect").value;
+  const infoDiv = document.getElementById("infoFournisseur");
+
+  if (select === "abdellah") {
+    infoDiv.innerHTML = `
+      <strong>TABBOU ABDELLAH</strong><br>
+      zone dépôt hamrouche hammoudi skikda<br>
+      N° Register : 02A0727885<br>
+      ID Fiscal : 1965521210024739<br>
+      N° Article Impôt : 21379976405
+    `;
+  } else {
+    infoDiv.innerHTML = `
+      <strong>TABBOU KAMEL</strong><br>
+      cité tafrala lot n°01 beni oulbene skikda<br>
+      N° Register : 12 A 0758272<br>
+      ID Fiscal : 184210105292140<br>
+      N° Article Impôt : 21210460081
+    `;
+  }
+}
+
+const produits = [
+  { code: "B9805Y0077", nom: "ELIO II 1 L 850" },
+  { code: "B9805Y0079", nom: "ELIO II RONDE 2 L" },
+  { code: "B9805Y0078", nom: "ELIO II 5 L" },
+  { code: "B9805Y0080", nom: "FLEURIAL PLUS BOXEE 4 L" },
+  { code: "B9805Y0014", nom: "FLEURIAL PLUS 1,8L" },
+  { code: "B9805Y0058", nom: "FRIDOR 5L" },
+  { code: "B9805Y0053", nom: "FRIDOR 10L" },
+  { code: "B9805Y0063", nom: "FLEURIAL DUO 1 L" },
+  { code: "B9805Y0064", nom: "FLEURIAL DUO 2 L" },
+  { code: "B9805Y0065", nom: "FLEURIAL DUO 5 L" },
+  { code: "B9805Y0067", nom: "FLEURIAL PLUS 1,8L 100% COLZA" },
+  { code: "B9805Y0068", nom: "FLEURIAL PLUS 4L 100% COLZA" },
+  { code: "B9805Y0093", nom: "HUILE FLEURIAL TOURNESOL 1L" },
+  { code: "B9805Y0094", nom: "HUILE FLEURIAL TOURNESOL 2L" },
+  { code: "B9805Y0095", nom: "HUILE FLEURIAL AROMATISEE 1,8L" },
+  { code: "B9805Y0096", nom: "HUILE 1L DJAWHARA COLZA" },
+  { code: "B9850Y3020", nom: "SKOR 1KG (1200)" }
+];
+
+function addRow() {
+  const tbody = document.querySelector("#table tbody");
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input list="codes" class="code" placeholder="Code produit" oninput="updateFromCode(this)"></td>
+    <td><input list="noms" class="designation" placeholder="Désignation" oninput="updateFromName(this)"></td>
+    <td><input type="number" placeholder="Qté" min="0"></td>
+    <td>
+      <select>
+        <option value="Palette">Palette</option>
+        <option value="Colis">Colis</option>
+        <option value="Unité">Unité</option>
+      </select>
+    </td>
+    <td><button onclick="removeRow(this)">✖</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+function updateFromCode(input) {
+  const row = input.closest("tr");
+  const produit = produits.find(p => p.code.toLowerCase() === input.value.toLowerCase());
+  if (produit) row.querySelector(".designation").value = produit.nom;
+}
+
+function updateFromName(input) {
+  const row = input.closest("tr");
+  const produit = produits.find(p => p.nom.toLowerCase() === input.value.toLowerCase());
+  if (produit) row.querySelector(".code").value = produit.code;
+}
+
+function removeRow(btn) {
+  btn.closest("tr").remove();
+}
+
+document.body.insertAdjacentHTML("beforeend", `
+  <datalist id="codes">${produits.map(p => `<option value="${p.code}">`).join("")}</datalist>
+  <datalist id="noms">${produits.map(p => `<option value="${p.nom}">`).join("")}</datalist>
+`);
+
+window.onload = addRow;
+</script>
+
+</body>
+</html>
