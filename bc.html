@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bon de Commande</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+    .page {
+      background: white;
+      max-width: 900px;
+      margin: auto;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+      border-radius: 10px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 25px;
+      text-transform: uppercase;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background: #f2f2f2;
+      font-weight: 600;
+    }
+    input, select {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      text-align: center;
+      width: 100%;
+    }
+    select {
+      appearance: none;
+      border: 1px solid #ccc;
+      background-color: white;
+      border-radius: 4px;
+      padding: 2px;
+    }
+    .btns {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .btns button {
+      background: #2563eb;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      margin: 4px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s;
+    }
+    .btns button:hover {
+      background: #1e40af;
+    }
+    @media print {
+      .btns,
+      th:last-child,
+      td:last-child,
+      #clientSelect,
+      label[for="clientSelect"] { display: none; }
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; padding: 0; padding-top:70px; }
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .inline-input {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+    .inline-input label {
+      font-weight: 600;
+    }
+    .inline-input input {
+      width: 120px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+
+    /* ✅ Responsive ajustement */
+    @media (max-width: 600px) {
+      .page { padding: 15px; }
+      h1 { font-size: 18px; }
+      table { font-size: 12px; }
+      th, td { padding: 4px; }
+      .inline-input { flex-direction: column; align-items: flex-start; }
+      .inline-input input { width: 100%; }
+      .header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <h1><strong>BON DE COMMANDE</strong></h1>
+
+  <div class="header">
+    <div>
+      <select id="clientSelect" onchange="changerFournisseur()" style="border:1px solid #ccc; padding:5px 8px; border-radius:4px;">
+        <option value="kamel">TABBOU KAMEL</option>
+        <option value="abdellah">TABBOU ABDELLAH</option>
+      </select>
+
+      <div id="infoFournisseur" style="margin-top:8px; line-height:1.5;">
+        <strong>TABBOU KAMEL</strong><br>
+        cité tafrala lot n°01 beni oulbene skikda<br>
+        N° Register : 12 A 0758272<br>
+        ID Fiscal : 184210105292140<br>
+        N° Article Impôt : 21210460081
+      </div>
+    </div>
+
+    <div>
+      <strong>SPA CEVITAL</strong><br>
+      <div class="inline-input">
+        <label>Bon de commande N° :</label>
+        <input value="242/2025" />
+      </div>
+      <div class="inline-input">
+        <label>Date :</label>
+        <input value="28/10/2025" />
+      </div>
+    </div>
+  </div>
+
+  <table id="table">
+    <thead>
+      <tr>
+        <th style="width:25%">Code produit</th>
+        <th style="width:45%">Désignation</th>
+        <th style="width:10%">Quantité</th>
+        <th style="width:15%">Un.</th>
+        <th style="width:10%">Suppr</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="btns">
+    <button onclick="addRow()">Ajouter ligne</button>
+    <button onclick="window.print()">Imprimer / PDF</button>
+  </div>
+
+</div>
+
+<script>
+function changerFournisseur() {
+  const select = document.getElementById("clientSelect").value;
+  const infoDiv = document.getElementById("infoFournisseur");
+
+  if (select === "abdellah") {
+    infoDiv.innerHTML = `
+      <strong>TABBOU ABDELLAH</strong><br>
+      zone dépôt hamrouche hammoudi skikda<br>
+      N° Register : 02A0727885<br>
+      ID Fiscal : 1965521210024739<br>
+      N° Article Impôt : 21379976405
+    `;
+  } else {
+    infoDiv.innerHTML = `
+      <strong>TABBOU KAMEL</strong><br>
+      cité tafrala lot n°01 beni oulbene skikda<br>
+      N° Register : 12 A 0758272<br>
+      ID Fiscal : 184210105292140<br>
+      N° Article Impôt : 21210460081
+    `;
+  }
+}
+
+const produits = [
+  { code: "B9805Y0077", nom: "ELIO II 1 L 900" },
+  { code: "B9805Y0079", nom: "ELIO II RONDE 2 L" },
+  { code: "B9805Y0078", nom: "ELIO II 5 L" },
+  { code: "B9805Y0080", nom: "FLEURIAL PLUS BOXEE 4 L" },
+  { code: "B9805Y0014", nom: "FLEURIAL PLUS 1,8l" },
+  { code: "B9805Y0058", nom: "FRIDOR 5L" },
+  { code: "B9805Y0053", nom: "FRIDOR 10L" },
+  { code: "B9805Y0063", nom: "FLEURIAL DUO  1 L" },
+  { code: "B9805Y0064", nom: "FLEURIAL DUO  2 L" },
+  { code: "B9805Y0065", nom: "FLEURIAL DUO 5 L" },
+  { code: "B9805Y0067", nom: "FLEURIAL PLUS 1,8L 100% COLZA" },
+  { code: "B9805Y0068", nom: "FLEURIAL PLUS 4L 100% COLZA" },
+  { code: "B9805Y0093", nom: "HUILE FLEURIAL TOURNESOL 1L" },
+  { code: "B9805Y0095", nom: "HUILE FLEURIAL AROMATISEE 1,8L" },
+  { code: "B9805Y0096", nom: "HUILE  1L DJAWHARA COLZA" },
+  { code: "B9805Y0094", nom: "HUILE FLEURIAL TOURNESOL 2L" },
+  { code: "B9850Y3020", nom: "SKOR 1KG (1200)" },
+  { code: "B9850Y3029", nom: "SKOR 2KG 1200" },
+  { code: "B9850Y3030", nom: "SKOR 5 KG 1120" },
+  { code: "B9850Y3031", nom: "SKOR 1KG ROUX" },
+  { code: "B9850Y3021", nom: "SKOR  SACHET VERSEUR 1Kg" },
+  { code: "B9850Y3025", nom: "NEW SKOR EN MORCEAUX   750 G 945" },
+  { code: "B9850Y3388", nom: "SUCRE BLANC        25 KG" },
+  { code: "B9850Y3370", nom: "SUCRE BLANC 50 KG" },
+  { code: "B9850Y3381", nom: "SUCRE BLANC BIG BAG" },
+  { code: "B9850Y3035", nom: "SUCRE SKOR 10KG  1200 KG" },
+  { code: "B9850Y3394", nom: "SUCRE SKOR VERSEUR ROUX 500G" },
+  { code: "B9850Y3027", nom: "SUCRE SKOR VERSEUR ROUX 750G" },
+  { code: "B9850Y3039", nom: "SKOR SUCRE GLACE 700g/N" },
+  { code: "B9810Y5502", nom: "NAPPAGE A BASE DE SUCRE SEAU 8KG" },
+  { code: "B9850Y3037", nom: "SKOR SUCRE GLACE 700g" },
+  { code: "B9802Y5005", nom: "RIZO- RIZ BLANC 1KG" },
+  { code: "B9802Y5010", nom: "RIZO- RIZ BLANC 500G" },
+  { code: "B9802Y0021", nom: "RIZ ETUVE BASMATI 1KG" },
+  { code: "B9802Y5009", nom: "RIZO - RIZETUVE 500 gr" },
+  { code: "B9802Y5004", nom: "RIZO - RIZETUVE 1KG" },
+  { code: "B9802Y5002", nom: "LEGUSTE-HARICOTS BLANCS 1KG" },
+  { code: "B9802Y5007", nom: "LEGUSTE-HARICOTS BLANCS 500 gr" },
+  { code: "B9802Y5003", nom: "LEGUSTE - LENTILLES VERTES" },
+  { code: "B9802Y5008", nom: "LEGUSTE - LENTILLES VERTES 500 GR" },
+  { code: "B9802Y5006", nom: "LEGUSTE - POIS CHICHES 500 GR" },
+  { code: "B9802Y5001", nom: "LEGUSTE - POIS CHICHES 1KG" },
+  { code: "B9802Y5012", nom: "LEGUSTE-HARICOTS BLANCS 25 KG" },
+  { code: "B9812Y0001", nom: "EAU MINERALE 1.5L" },
+  { code: "B9812Y0005", nom: "EAU MINERALE 1 L" },
+  { code: "B9812Y0007", nom: "EAU MINERALE 0.5L" },
+  { code: "B9812Y0006", nom: "EAU MINERALE GAZEIFIEE" },
+  { code: "B9812Y3053", nom: "EAU MINERALE GAZEIFIEE 33CL" },
+  { code: "B9812Y1026", nom: "BOISSON FRUITEES GAZEIFIEE MOJITO" },
+  { code: "B9812Y1027", nom: "BOISSON LEMON LIME GAZEIFIEE CANETTE" },
+  { code: "B9812Y1028", nom: "BOISSON FRUITEE GAZEIFIEE CANETTE" },
+  { code: "B9812Y8054", nom: "E.F Orange 2 L PET " },
+  { code: "B9812Y8082", nom: "E.F Orange MANDARINE 2 L PET" },
+  { code: "B9812Y8055", nom: "E.F Orange / PECHE  2 L PET " },
+  { code: "B9812Y8056", nom: "E.F Orange / ABRICOT  2 L PET " },
+  { code: "B9812Y8052", nom: "E.F COCKTAIL TROPICAL  2 L PET " },
+  { code: "B9812Y8051", nom: "E.F Orange / MANGUE  2 L PET " },
+  { code: "B9812Y8026", nom: "E.F TCHINA ORANGE MANDARINE" },
+  { code: "B9812Y8088", nom: "E.F CAROTTE Orange CITRAN 2 L PET" },
+  { code: "B9812Y8049", nom: "E.F FRUITS ROUGE  2 L PET " },
+  { code: "B9812Y8069", nom: "E.F Orange  1L PET " },
+  { code: "B9812Y8067", nom: "E.F FRUITS ROUGE  1L PET " },
+  { code: "B9812Y8063", nom: "E.F Orange / PECHE  1 L PET " },
+  { code: "B9812Y8064", nom: "E.F Orange / ABRICOT  1 L PET " },
+  { code: "B9812Y8077", nom: "E.F COCKTAIL EXOTIQUE 1 L PET" },
+  { code: "B9812Y8083", nom: "E.F NECTAR DE MANGUE 1L PET" },
+  { code: "B9812Y8081", nom: "E.F Orange MANDARINE  1L PET" },
+  { code: "B9812Y8068", nom: "E.F COCKTAIL TROPICAL 1 L PET " },
+  { code: "B9812Y8085", nom: "E,F CITRONNADE 1L PET" },
+  { code: "B9812Y8065", nom: "E.F ORANGE- MANGUE  1L PET " },
+  { code: "B9812Y8087", nom: "E.F POMME RAISIN  1L PET" },
+  { code: "B9812Y8090", nom: "E,F CAROTTE ORANGE CITRON 1L PET" },
+  { code: "B9812Y8070", nom: "E.F Orange 0,33 L PET" },
+  { code: "B9812Y8072", nom: "E.F Orange / PECHE  0,33 L" },
+  { code: "B9812Y8073", nom: "E.F Orange / ABRICOT  0,33L" },
+  { code: "B9812Y8071", nom: "E.F Orange / MANGUE  0,33 L" },
+  { code: "B9812Y8089", nom: "E.F Orange / CITRON 0,33 L" },
+  { code: "B9812Y8080", nom: "E.F Orange / Mandarine 0,33 L" },
+  { code: "B9812Y8076", nom: "E.F COCKTAIL TROPICAL  0,33L PET" },
+  { code: "B9812Y8086", nom: "E,F CITRONNADE 0,33 PEL" },
+  { code: "B9812Y8079", nom: "E.F  POMME-POIRE 0,33 L PET" },
+  { code: "B9812Y8078", nom: "E.F FRUITS ROUGE  0,33 PET" },
+  { code: "B9812Y8091", nom: "E.F FRUITS POMME RAISIN  0,33 PET" },
+  { code: "B9810Y5003", nom: "CONFITURE Figue 1/2 400G" },
+  { code: "B9810Y5001", nom: "CONFITURE ABRICOT 1/2 400G" },
+  { code: "B9810Y5002", nom: "CONFITURE ABRICOT 4/4 800G" },
+  { code: "B9810Y5010", nom: "CONFITURE MATINA FRAISE 530g" },
+  { code: "B9810Y5011", nom: "CONFITURE MATINA FRAISE 295g" },
+  { code: "B9810Y5012", nom: "CONFITURE MATINA FRAISE 440g" },
+  { code: "B9810Y5008", nom: "CONFITURE MATINA ABRICOT 440g" },
+  { code: "B9810Y5007", nom: "CONFITURE MATINA ABRICOT 295g" },
+  { code: "B9810Y5006", nom: "CONFITURE MATINA ABRICOT 530g" },
+  { code: "B9810Y5005", nom: "CONFITURE MATINA ABRICOT 280g" },
+  { code: "B9810Y5009", nom: "CONFITURE MATINA FRAISE 280g" },
+  { code: "B9810Y5004", nom: "CONFITURE FRAISE 1/2 400gr" },
+  { code: "B9810Y5013", nom: "CONFITURE MATINA FIGUE 280  G" },
+  { code: "B9810Y5015", nom: "CONFITURE MATINA FIGUE 295 G" },
+  { code: "B9810Y5014", nom: "CONFITURE MATINA FIGUE 530 G" },
+  { code: "B9810Y5016", nom: "ONFITURE MATINA FIGUE 440 G" },
+  { code: "B9810Y9000", nom: "MIEL INDUSTRIEL 5KG ASSILA" },
+  { code: "B9810Y9001", nom: "MIEL INDUSTRIEL 3KG ASSILA" },
+  { code: "B9810Y9002", nom: "MIEL INDUSTRIEL 2KG ASSILA" },
+  { code: "B9810Y9004", nom: "MIEL INDUSTRIEL 500Gr ASSILA" },
+  { code: "B9810Y9003", nom: "MIEL INDUSTRIEL 1KG ASSILA" },
+  { code: "B9851Y0004", nom: "CHOCOLAT EN POUDRE MATINA 1KG" },
+  { code: "B9851Y0002", nom: "CHOCOLAT EN POUDRE MATINA 500G" },
+  { code: "B9851Y0001", nom: "CHOCOLAT EN POUDRE MATINA 300G" },
+  { code: "B5599Y0209", nom: "CHOCOLAT EN POUDRE A/IMPRESSION A241237" },
+  { code: "B9810Y3009", nom: "MAYONNAISE FULL FAT  (VERRE) 450 gr" },
+  { code: "B9810Y3004", nom: "MAYONNAISE FULL FAT  (PET) 395 gr" },
+  { code: "B9810Y3003", nom: "MAYONNAISE FULL FAT  (PET) 200gr" },
+  { code: "B9810Y3019", nom: "MAYONNAISE FULL FAT (VERRE) 220gr" },
+  { code: "B9810Y3018", nom: "MAYONNAISE FULL FAT (VERRE) 680gr" },
+  { code: "B9810Y3011", nom: "MAYONNAISE AIL ET FINES HERBES (PET) 395gr" },
+  { code: "B9810Y3010", nom: "MAYONNAISE AIL ET FINES HERBES (PET ) 200 gr" },
+  { code: "B9810Y3002", nom: "MOUTARDE FINE DE DIJON (VERRE) 350 GR" },
+  { code: "B9810Y3014", nom: "MOUTARDE FINE DE DIJON (PET) 230 GR" },
+  { code: "B9810Y3016", nom: "MOUTARDE DOUCE (PET) 230g" },
+  { code: "B9810Y3001", nom: "MOUTARDE FINE DE DIJON (VERRE) 150g" },
+  { code: "B9810Y3020", nom: "MOUTARDE FINE DE DIJON (VERRE)760g" },
+  { code: "B9810Y3021", nom: "MOUTARDE DE DIJON FOODS3Kg" },
+  { code: "B9810Y3050", nom: "KETCHUP (PET) 220g." },
+  { code: "B9810Y3051", nom: "KETCHUP (PET) 435g." },
+  { code: "B9810Y3013", nom: "KETCHUP (PEHD) 1000g. FOODY'S" },
+  { code: "B9810Y4008", nom: "VIAIGRETTE LEGERE MAISON (PET) 500 g" },
+  { code: "B9810Y4025", nom: "SAUCE MAYONNAISE           ( PEHD ) 850gr" },
+  { code: "B9810Y4026", nom: "SAUCE MAYONNAISE  FOOD'S GOUT FROMAGE 850G" },
+  { code: "B9810Y4015", nom: "SAUCE MAYONNAISE           ( PEHD ) 900gr" },
+  { code: "B9810Y4007", nom: "SAUCE BARBECUE (PET) 250gr." },
+  { code: "B9810Y3015", nom: "SAUCE BARBECUE (PET) 470gr." },
+  { code: "B9810Y4011", nom: "VIAIGRETTE  HUILE D'OLIVE ET CITRON" },
+  { code: "B9810Y4009", nom: "VIAIGRETTE CIBOULETTE" },
+  { code: "B9810Y4013", nom: "SAUCE SAMOURAI (PEHD) 900 g" },
+  { code: "B9810Y4012", nom: "SAUCE ALGERIENNE (PEHD) 900 g" },
+  { code: "B9810Y4010", nom: "VINAIGRETTE CRUDITES" },
+  { code: "B9810Y3054", nom: "HARISSA (VERRE)150G" },
+  { code: "B9810Y6029", nom: "SAUCE MAYONNAISE GOU FROMAGE 5KG" },
+  { code: "B9810Y6028", nom: "SAUCE MAYONNAISE FOODY'S 5KG" },
+  { code: "B9810Y6011", nom: "SAUCE MAYONNAISE FOODY'S 3KG" },
+  { code: "B9810Y6027", nom: "SAUCE KETCHUP FOODY'S 850G" },
+  { code: "B9810Y4016", nom: "SAUCE MAYONNAISE ELIO (VERRE) 235g" },
+  { code: "B9810Y4017", nom: "SAUCE MAYONNAISE ELIO (VERRE) 485g" },
+  { code: "B9810Y4018", nom: "SAUCE MAYONNAISE ELIO (VERRE) 700 g" },
+  { code: "B9810Y4020", nom: "SAUCE MAYONNAISE ELIO (PET) 420g" },
+  { code: "B9810Y4019", nom: "SAUCE MAYONNAISE ELIO (PET) 220g" },
+  { code: "B9810Y4041", nom: "SAUCE ALGERIENNE (PEHD) 490g" },
+  { code: "B9810Y4028", nom: "SAUCE ALGERIENNE (PEHD) 850g" },
+  { code: "B9810Y4027", nom: "SAUCE MAYONNAISE ELIO GOUT FROMAGE PET 220 G" },
+  { code: "B9810Y4033", nom: "SAUCE HARISSA 235G PET" },
+  { code: "B9810Y4036", nom: "SAUCE SAMOURAI 420G PET" },
+  { code: "B9810Y4037", nom: "SAUCE ALGERIENNE 435g,PET" },
+  { code: "B9810Y4038", nom: "SAUCE BLANCHE 435G PET" },
+  { code: "B9810Y4039", nom: "SAUCE BIGGY BURGER 435G PET" },
+  { code: "B9810Y3055", nom: "FROMAGE FONDU 235g. (VERRE)" },
+  { code: "B9810Y4029", nom: "SAUCE HARISSA FOODY'S (REHD) 850G" },
+  { code: "B9810Y4050", nom: "SAUCE MAYONNAISE  FOODY'S GOUT FROMAGE 3G" },
+  { code: "B9810Y4045", nom: "DOSETTESAUCE MAYONNAISE  FOODY'S GOUT FROMAGE 10G" },
+  { code: "B9810Y4052", nom: "SAUCE MAYONNAISE  FOODY'S (PET) 220G" },
+  { code: "B9810Y4053", nom: "SAUCE MAYONNAISE  FOODY'S GOUT FROMAGE (PET) 220G" },
+  { code: "B9810Y4046", nom: "PACK 01 MAYAIL ET FINE HERBE 395+ VINAIGRETTE CIBOULETTE" },
+  { code: "B9810Y4047", nom: "PACK 02 MAY ELIO 235G+ HRISSA 235" },
+  { code: "B9810Y4049", nom: "PACK 04 MAYAIL ET FINE HERBE 395+ KETCHUP 435G" },
+  { code: "B9806Y0066", nom: "FEUILLETAGE PLAQ 500 G" },
+  { code: "B9806Y0051", nom: "FEUILLETAGE          PLAQ 1KG" },
+  { code: "B9806Y0040", nom: "FLEURIAL    BARQ 500 G" },
+  { code: "B9806Y0065", nom: "FLEURIAL  PLAQ 250 G" },
+  { code: "B9806Y0038", nom: "FLEURIAL BARQ 250" },
+  { code: "B9806Y0078", nom: "FLEURIAL ACTIVE BARQ 250" },
+  { code: "MABB400", nom: "MATINA            BARQ 400 G" },
+  { code: "B9806Y0067", nom: "SHORTENING    38/40" },
+  { code: "B9806Y0030", nom: "GRAISSE DE PALME 100%" },
+  { code: "B9806Y0079", nom: "BEURRE TENDRE  GOURMAND DEMI SALE 250GR" },
+  { code: "B9806Y0039", nom: "BEURRE TENDRE  GOURMAND" },
+  { code: "B9806Y0002", nom: "BEURRE  GOURMAND 5KG" },
+  { code: "B9806Y0003", nom: "BEURRE  GOURMAND 2,5 KG" },
+  { code: "B9806Y0042", nom: "MATINA BARQUETTE  250 GRS" },
+  { code: "B9806Y0004", nom: "BEURRE  DELICE PLAQ 250G" },
+  { code: "B9806Y0041", nom: "MATINA PATISSERIE PLAQ. 20*250 GRS" },
+  { code: "B9806Y0022", nom: "EL MEDINA 16*500" },
+  { code: "B9806Y0029", nom: "EL MEDINA  900 Grs" },
+  { code: "B9806Y0064", nom: "EL MEDINA" },
+  { code: "B9806Y0075", nom: "SMEN EL MEDINE 24*250G" },
+  { code: "B9806Y0080", nom: "SMEN MEDINA 900 SPECIAL GATEAUX" },
+  { code: "B9806Y0081", nom: "SMEN MEDINA 500 SPECIAL GATEAUX" },
+  { code: "B9806Y0082", nom: "SMEN MEDINA 250 SPECIAL GATEAUX" }
+
+];
+
+function addRow() {
+  const tbody = document.querySelector("#table tbody");
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input list="codes" class="code" placeholder="Code produit" oninput="updateFromCode(this)"></td>
+    <td><input list="noms" class="designation" placeholder="Désignation" oninput="updateFromName(this)"></td>
+    <td><input type="number" placeholder="Qté" min="0"></td>
+    <td>
+      <select>
+        <option value="Palette">Palette</option>
+        <option value="Colis">Colis</option>
+        <option value="Unité">Unité</option>
+      </select>
+    </td>
+    <td><button onclick="removeRow(this)">✖</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+function updateFromCode(input) {
+  const row = input.closest("tr");
+  const produit = produits.find(p => p.code.toLowerCase() === input.value.toLowerCase());
+  if (produit) row.querySelector(".designation").value = produit.nom;
+}
+
+function updateFromName(input) {
+  const row = input.closest("tr");
+  const produit = produits.find(p => p.nom.toLowerCase() === input.value.toLowerCase());
+  if (produit) row.querySelector(".code").value = produit.code;
+}
+
+function removeRow(btn) {
+  btn.closest("tr").remove();
+}
+
+document.body.insertAdjacentHTML("beforeend", `
+  <datalist id="codes">${produits.map(p => `<option value="${p.code}">`).join("")}</datalist>
+  <datalist id="noms">${produits.map(p => `<option value="${p.nom}">`).join("")}</datalist>
+`);
+
+window.onload = addRow;
+</script>
+
+</body>
+</html>
