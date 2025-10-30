@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bon de Commande</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .page {
+      background: white;
+      width: 210mm;
+      min-height: 297mm;
+      margin: auto;
+      padding: 40px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .btns {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background-color: #2563eb;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background-color: #1d4ed8;
+    }
+
+    #clientSelect {
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+
+    .cachet {
+      margin-top: 30px;
+      text-align: right;
+      width: 100%;
+    }
+
+    .cachet img {
+      width: 217px;
+      height: auto;
+      display: inline-block;
+      float: right;
+    }
+
+    @media print {
+      .btns,
+      th:last-child,
+      td:last-child,
+      #clientSelect,
+      label[for="clientSelect"] { display: none; }
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; padding: 0; padding-top: 70px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="btns">
+    <label for="clientSelect">Choisir le fournisseur :</label>
+    <select id="clientSelect" onchange="changerFournisseur()">
+      <option value="kamel" selected>TABBOU KAMEL</option>
+      <option value="abdellah">TABBOU ABDELLAH</option>
+    </select>
+    <button id="btnPDF" onclick="enregistrerPDF()">📄 Enregistrer en PDF</button>
+  </div>
+
+  <div class="page" id="bonCommande">
+    <div id="infoFournisseur">
+      <strong>TABBOU KAMEL</strong><br>
+      cité tafrala lot n°01 beni oulbene skikda<br>
+      N° Register : 12 A 0758272<br>
+      ID Fiscal : 184210105292140<br>
+      N° Article Impôt : 21210460081
+    </div>
+
+    <div class="cachet">
+      <img id="cachetImage" src="images/cachet_kamel.png" alt="Cachet et signature" crossorigin="anonymous">
+    </div>
+  </div>
+
+  <script>
+    function changerFournisseur() {
+      const select = document.getElementById("clientSelect").value;
+      const infoDiv = document.getElementById("infoFournisseur");
+      const cachetImg = document.getElementById("cachetImage");
+
+      if (select === "abdellah") {
+        infoDiv.innerHTML = `
+          <strong>TABBOU ABDELLAH</strong><br>
+          zone dépôt hamrouche hammoudi skikda<br>
+          N° Register : 02A0727885<br>
+          ID Fiscal : 1965521210024739<br>
+          N° Article Impôt : 21379976405
+        `;
+        cachetImg.src = "images/cachet_abdellah.png";
+      } else {
+        infoDiv.innerHTML = `
+          <strong>TABBOU KAMEL</strong><br>
+          cité tafrala lot n°01 beni oulbene skikda<br>
+          N° Register : 12 A 0758272<br>
+          ID Fiscal : 184210105292140<br>
+          N° Article Impôt : 21210460081
+        `;
+        cachetImg.src = "images/cachet_kamel.png";
+      }
+    }
+
+    async function enregistrerPDF() {
+      const page = document.getElementById("bonCommande");
+      const btn = document.getElementById("btnPDF");
+      btn.textContent = "⏳ Création du PDF...";
+
+      // Attendre que toutes les images soient chargées
+      const images = page.querySelectorAll("img");
+      await Promise.all(Array.from(images).map(img => {
+        if (!img.complete) {
+          return new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        }
+      }));
+
+      // Créer un canvas
+      const canvas = await html2canvas(page, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, imgHeight);
+      pdf.save(`Bon_Commande_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+      btn.textContent = "📄 Enregistrer en PDF";
+    }
+  </script>
+</body>
+</html>
