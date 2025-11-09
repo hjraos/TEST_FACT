@@ -1,0 +1,262 @@
+<!--
+Fichier : app-bc.html
+Contenu : application single-file (HTML + JS) pour gérer bons de commande
+Backend : Google Apps Script (code inclus plus bas). Remplacez YOUR_SCRIPT_ID par l'ID de votre script déployé.
+
+Fonctionnalités :
+- Liste des fournisseurs (sheet "Fournisseurs")
+- Création d'un bon de commande (sheet "Bons")
+- Interface pour ajouter lignes produit, choisir fournisseur avant de saisir
+- Bouton d'aperçu/impression (template imprimable)
+- Sauvegarde via fetch vers Apps Script
+
+Instructions de déploiement du Apps Script inclues dans le bloc // APPS SCRIPT
+-->
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Application Bon de Commande</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:18px;background:#f6f7fb}
+    .card{background:#fff;padding:14px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+    h1{margin:0 0 12px;font-size:20px}
+    label{display:block;margin-top:8px;font-size:13px}
+    input,select,textarea{width:100%;padding:8px;border-radius:4px;border:1px solid #ccc;box-sizing:border-box}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    .btn{display:inline-block;padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+    .btn-primary{background:#2b6cb0;color:#fff}
+    .btn-ghost{background:transparent;border:1px solid #ccc}
+    .row{display:flex;gap:10px}
+    .col{flex:1}
+    .right{text-align:right}
+    .small{font-size:12px;color:#666}
+    .print-area{display:none}
+    @media print{body>*:not(.print-area){display:none} .print-area{display:block}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Application - Bon de Commande</h1>
+    <div class="row">
+      <div class="col">
+        <label>Fournisseur</label>
+        <select id="supplierSelect"></select>
+        <div class="small">Choisir le fournisseur avant d'ajouter des lignes</div>
+      </div>
+      <div class="col">
+        <label>Date</label>
+        <input type="date" id="bcDate" value="">
+      </div>
+      <div class="col">
+        <label>Numéro BC</label>
+        <input type="text" id="bcNumber" placeholder="ex: 247/2025">
+      </div>
+    </div>
+
+    <h3 style="margin-top:14px">Lignes de commande</h3>
+    <table id="linesTable">
+      <thead>
+        <tr><th>Code produit</th><th>Désignation</th><th>Quantité</th><th>Un.</th><th></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div style="margin-top:8px">
+      <button class="btn btn-ghost" id="addLineBtn">➕ Ajouter une ligne</button>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn btn-primary" id="saveBtn">Enregistrer le bon</button>
+      <button class="btn" id="previewBtn">Aperçu / Imprimer</button>
+      <button class="btn btn-ghost" id="clearBtn">Effacer</button>
+    </div>
+
+    <div id="status" class="small" style="margin-top:10px"></div>
+  </div>
+
+  <!-- zone imprimable -->
+  <div class="print-area card" id="printArea" style="margin-top:18px">
+    <div id="printContent"></div>
+  </div>
+
+<script>
+// -------- CONFIG: remplacer par l'URL de votre Web App Google Apps Script
+const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+
+// helper
+function qs(id){return document.getElementById(id)}
+
+// initialisation
+document.addEventListener('DOMContentLoaded', ()=>{
+  qs('bcDate').value = new Date().toISOString().slice(0,10);
+  loadSuppliers();
+  addLine(); // une ligne par défaut
+  qs('addLineBtn').addEventListener('click', addLine);
+  qs('saveBtn').addEventListener('click', saveOrder);
+  qs('previewBtn').addEventListener('click', previewPrint);
+  qs('clearBtn').addEventListener('click', clearForm);
+});
+
+async function loadSuppliers(){
+  try{
+    const res = await fetch(SCRIPT_URL + '?action=listSuppliers');
+    const data = await res.json();
+    const sel = qs('supplierSelect'); sel.innerHTML='';
+    data.forEach(s=>{
+      const opt = document.createElement('option');
+      opt.value = s.Nom; opt.textContent = s.Nom + ' — ' + (s['Adresse / Zone dépôt']||'');
+      opt.dataset.reg = s['N° Registre de commerce']||'';
+      opt.dataset.fiscal = s['ID Fiscal']||'';
+      opt.dataset.article = s['N° Article d’impôt']||'';
+      sel.appendChild(opt);
+    });
+  }catch(err){qs('status').textContent = 'Erreur chargement fournisseurs: '+err.message}
+}
+
+function addLine(data={code:'',des:'',qty:'',unit:''}){
+  const tbody = qs('linesTable').querySelector('tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="code" value="${escapeHtml(data.code)}"></td>
+    <td><input class="des" value="${escapeHtml(data.des)}"></td>
+    <td><input class="qty" type="number" min="0" value="${escapeHtml(data.qty)}"></td>
+    <td><input class="unit" value="${escapeHtml(data.unit)}"></td>
+    <td style="width:80px"><button class="btn btn-ghost remove">Suppr</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelector('.remove').addEventListener('click', ()=>tr.remove());
+}
+
+function getLines(){
+  const rows = [...qs('linesTable').querySelectorAll('tbody tr')];
+  return rows.map(r=>({
+    code: r.querySelector('.code').value.trim(),
+    des: r.querySelector('.des').value.trim(),
+    qty: Number(r.querySelector('.qty').value) || 0,
+    unit: r.querySelector('.unit').value.trim()
+  })).filter(l=> l.code || l.des || l.qty>0);
+}
+
+function clearForm(){
+  qs('bcNumber').value='';
+  qs('linesTable').querySelector('tbody').innerHTML='';
+  addLine();
+}
+
+async function saveOrder(){
+  const supplier = qs('supplierSelect').value;
+  if(!supplier){qs('status').textContent='Choisir un fournisseur.';return}
+  const date = qs('bcDate').value;
+  const number = qs('bcNumber').value.trim() || 'N/A';
+  const lines = getLines();
+  if(lines.length===0){qs('status').textContent='Ajouter au moins une ligne.';return}
+  const payload = {action:'saveOrder',supplier,date,number,lines};
+  qs('status').textContent='Enregistrement en cours...';
+  try{
+    const res = await fetch(SCRIPT_URL,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+    });
+    const j = await res.json();
+    if(j.success){qs('status').textContent='Bon enregistré.';}
+    else qs('status').textContent='Erreur: '+(j.error||'non spécifié');
+  }catch(err){qs('status').textContent='Erreur enregistrement: '+err.message}
+}
+
+function previewPrint(){
+  const supplierOpt = qs('supplierSelect').selectedOptions[0];
+  if(!supplierOpt){qs('status').textContent='Choisir fournisseur';return}
+  const supplier = supplierOpt.value;
+  const reg = supplierOpt.dataset.reg||'';
+  const fiscal = supplierOpt.dataset.fiscal||'';
+  const article = supplierOpt.dataset.article||'';
+  const date = qs('bcDate').value;
+  const number = qs('bcNumber').value.trim() || '';
+  const lines = getLines();
+  // build HTML
+  const html = `
+    <div style="padding:12px">
+      <h2>BON DE COMMANDE</h2>
+      <div><strong>Fournisseur :</strong> ${escapeHtml(supplier)}</div>
+      <div><strong>Adresse / Registre :</strong> ${escapeHtml(reg)}</div>
+      <div><strong>ID Fiscal :</strong> ${escapeHtml(fiscal)} &nbsp; <strong>N° Article :</strong> ${escapeHtml(article)}</div>
+      <div style="margin-top:8px"><strong>Date : </strong>${escapeHtml(date)} &nbsp; <strong>N° :</strong> ${escapeHtml(number)}</div>
+      <table style="width:100%;margin-top:12px;border-collapse:collapse">
+        <thead>
+          <tr><th style="border:1px solid #ccc;padding:6px">Code produit</th><th style="border:1px solid #ccc;padding:6px">Désignation</th><th style="border:1px solid #ccc;padding:6px">Quantité</th><th style="border:1px solid #ccc;padding:6px">Un.</th></tr>
+        </thead>
+        <tbody>
+          ${lines.map(l=>`<tr><td style="border:1px solid #ccc;padding:6px">${escapeHtml(l.code)}</td><td style="border:1px solid #ccc;padding:6px">${escapeHtml(l.des)}</td><td style="border:1px solid #ccc;padding:6px">${escapeHtml(l.qty)}</td><td style="border:1px solid #ccc;padding:6px">${escapeHtml(l.unit)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  qs('printContent').innerHTML = html;
+  window.print();
+}
+
+function escapeHtml(s){return (s||'').toString().replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c])}
+
+</script>
+
+<!--
+---- APPS SCRIPT (Google) ----
+Créez un nouveau projet Apps Script, collez le code ci-dessous et déployez en tant que Web App
+- Exécuter l'application en tant que : Moi
+- Accès : Qui que ce soit, même anonyme (ou restreint selon vos besoins)
+Remplacez l'ID du script dans SCRIPT_URL ci-dessus par l'URL de déploiement
+-->
+
+<script id="apps-script" type="text/plain">
+// Apps Script code (Server):
+function doGet(e){
+  const action = e.parameter.action || '';
+  if(action === 'listSuppliers'){
+    return ContentService
+      .createTextOutput(JSON.stringify(listSuppliers()))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader('Access-Control-Allow-Origin','*');
+  }
+  return ContentService.createTextOutput(JSON.stringify({error:'no action'})).setMimeType(ContentService.MimeType.JSON).setHeader('Access-Control-Allow-Origin','*');
+}
+
+function doPost(e){
+  // e.postData.contents contient le JSON envoyé depuis le client
+  try{
+    const data = typeof e.postData === 'object' ? JSON.parse(e.postData.contents) : {};
+    if(data.action === 'saveOrder'){
+      const id = saveOrderToSheet(data);
+      return ContentService.createTextOutput(JSON.stringify({success:true,id:id})).setMimeType(ContentService.MimeType.JSON).setHeader('Access-Control-Allow-Origin','*');
+    }
+    return ContentService.createTextOutput(JSON.stringify({error:'unknown action'})).setMimeType(ContentService.MimeType.JSON).setHeader('Access-Control-Allow-Origin','*');
+  }catch(err){
+    return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON).setHeader('Access-Control-Allow-Origin','*');
+  }
+}
+
+function listSuppliers(){
+  const ss = SpreadsheetApp.openById('YOUR_SHEET_ID'); // remplacez
+  const sh = ss.getSheetByName('Fournisseurs');
+  const data = sh.getDataRange().getValues();
+  const headers = data.shift();
+  return data.map(r=>{
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = r[i]);
+    return obj;
+  });
+}
+
+function saveOrderToSheet(order){
+  const ss = SpreadsheetApp.openById('YOUR_SHEET_ID'); // remplacez
+  const sh = ss.getSheetByName('Bons');
+  // structure: Date | Numéro | Fournisseur | LignesJSON
+  const row = [new Date(), order.date || '', order.number || '', order.supplier || '', JSON.stringify(order.lines||[])];
+  sh.appendRow(row);
+  return sh.getLastRow();
+}
+</script>
+
+</body>
+</html>
