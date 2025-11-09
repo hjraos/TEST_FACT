@@ -133,45 +133,48 @@ function addRow() {
 
 function removeRow(btn) { btn.closest("tr").remove(); }
 
+// Generate bon number
 async function genererNumeroBon() {
   const fournisseur = document.getElementById("clientSelect").value;
-  const url = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+  const url = "https://script.google.com/macros/s/YOUR_DEPLOYED_WEBAPP_URL?fournisseur=" 
+              + encodeURIComponent(fournisseur);
 
   try {
-    const res = await fetch(`${url}?fournisseur=${encodeURIComponent(fournisseur)}`);
-    const numero = await res.text();
-    document.getElementById("numero").value = numero;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.numero) document.getElementById("numero").value = data.numero;
+    else alert("Erreur: " + (data.error || "Numéro introuvable"));
   } catch(err) {
     console.error(err);
     alert("Erreur lors de la génération du numéro.");
   }
 }
 
+// Send bon to Google Sheets
 async function envoyerGoogleSheet() {
-  const date = document.getElementById("dateBon").value;
-  const numero = document.getElementById("numero").value;
   const fournisseur = document.getElementById("clientSelect").value;
+  const numero = document.getElementById("numero").value;
+  const date = document.getElementById("dateBon").value;
 
-  const rows = Array.from(document.querySelectorAll("#table tbody tr")).map(tr => ({
-    date: tr.children[0].textContent,
-    numero: tr.children[1].textContent,
-    fournisseur: tr.children[2].textContent
-  }));
+  // Only date/numero/fournisseur rows
+  const rows = [{ date, numero, fournisseur }];
 
-  const data = { rows };
-
-  const url = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+  const url = "https://script.google.com/macros/s/YOUR_DEPLOYED_WEBAPP_URL";
 
   try {
     const res = await fetch(url, {
       method: "POST",
-      body: JSON.stringify(data)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows })
     });
-    if(res.ok) alert("✅ Bon enregistré !");
-    else alert("❌ Erreur !");
+
+    const result = await res.json();
+    if(result.success) alert("✅ Bon enregistré !");
+    else alert("❌ Erreur: " + (result.error || "Impossible d'enregistrer"));
+
   } catch(err) {
     console.error(err);
-    alert("Erreur réseau !");
+    alert("Erreur lors de l'envoi au serveur.");
   }
 }
 
@@ -183,3 +186,4 @@ window.onload = () => {
 
 </body>
 </html>
+
