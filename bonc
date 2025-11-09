@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bon de Commande Professionnel (Sans Prix)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom styles for printing */
+        @media print {
+            body {
+                background-color: #fff;
+            }
+            #app-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                max-width: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        .order-table th, .order-table td {
+            /* Styles pour reproduire le format professionnel de la photo */
+            border: 1px solid #e5e7eb;
+            padding: 12px 16px;
+        }
+        .input-text-area {
+            /* Input styling for a clean look */
+            @apply w-full border-none bg-transparent focus:outline-none p-1;
+        }
+        /* Assurer que les inputs ont une bordure visible uniquement dans l'interface non-imprimée */
+        #client-name, #client-address, #client-id-fiscal, #client-contact, 
+        .quantity-input, .code-select {
+            @apply border-gray-300 rounded-md;
+        }
+        @media print {
+            #client-name, #client-address, #client-id-fiscal, #client-contact, 
+            .quantity-input, .code-select {
+                border: none !important;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div id="app-container" class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10 mb-10">
+
+        <!-- Loading & Message Container -->
+        <div id="message-box" class="hidden fixed top-4 right-4 bg-green-500 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-300"></div>
+        <div id="loading-overlay" class="no-print fixed inset-0 bg-gray-900 bg-opacity-50 z-40 flex items-center justify-center hidden">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+        </div>
+
+        <!-- FIREBASE AUTH STATUS -->
+        <div id="auth-status" class="no-print text-xs text-right text-gray-500 mb-4">
+            Authentification...
+        </div>
+
+        <!-- HEADER & COMPANY INFO -->
+        <header class="mb-8 border-b-4 border-blue-600 pb-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div class="company-details mb-4 sm:mb-0">
+                    <h1 class="text-3xl font-bold text-blue-800">TABBOU KAMEL</h1>
+                    <p class="text-sm text-gray-700 mt-1">cité tafraila lot n°01 beni oulbene skikda</p>
+                    <p class="text-sm text-gray-700">ID Fiscal: <span id="company-id-fiscal">184210105292140</span></p>
+                    <p class="text-sm text-gray-700">N° Register: <span id="company-register-number">12 A 0758272</span></p>
+                    <p class="text-sm text-gray-700">N° Article Impôt: <span id="company-article-impot">21210460081</span></p>
+                </div>
+                
+                <div class="order-meta text-right">
+                    <h2 class="text-2xl font-light text-gray-600 mb-2 uppercase tracking-wider">BON DE COMMANDE</h2>
+                    <div class="text-sm">
+                        <p class="font-semibold text-gray-800">N° Commande: <span id="order-number" class="font-normal text-blue-600">248/2025</span></p>
+                        <p class="font-semibold text-gray-800">Date: <span id="order-date" class="font-normal">11/05/2025</span></p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CLIENT INFO -->
+        <section class="mb-8 border p-4 rounded-lg bg-gray-50 print:bg-white print:border-gray-200">
+            <h3 class="text-lg font-semibold text-blue-700 mb-3 border-b pb-2">Informations du Client</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Nom du Client / Société</label>
+                    <input type="text" id="client-name" value="SPA CEVITAL" class="input-text-area border p-2" placeholder="Entrez le nom du client">
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Adresse</label>
+                    <input type="text" id="client-address" value="Oran, Algérie" class="input-text-area border p-2" placeholder="Entrez l'adresse du client">
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">ID Fiscal Client</label>
+                    <input type="text" id="client-id-fiscal" class="input-text-area border p-2" placeholder="ID Fiscal">
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1">Contact (Email/Tel)</label>
+                    <input type="text" id="client-contact" class="input-text-area border p-2" placeholder="Contact">
+                </div>
+            </div>
+        </section>
+
+        <!-- ORDER ITEMS TABLE -->
+        <section class="mb-8 overflow-x-auto">
+            <table class="w-full text-sm border-collapse order-table bg-white rounded-lg">
+                <thead>
+                    <tr class="bg-blue-50 text-blue-800 font-bold uppercase tracking-wider">
+                        <th class="w-1/5">Code produit</th>
+                        <th class="w-2/5">Désignation</th>
+                        <th class="w-1/5 text-center">Un.</th>
+                        <th class="w-1/5 text-center">Quantité</th>
+                        <th class="no-print w-10"></th>
+                    </tr>
+                </thead>
+                <tbody id="order-items-body">
+                    <!-- Dynamic rows will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ADD ITEM BUTTON (Totals block is removed) -->
+        <div class="flex justify-start">
+            <button id="add-item-btn" class="no-print bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-200 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Ajouter un Article
+            </button>
+        </div>
+        
+        <!-- FOOTER & SIGNATURE -->
+        <footer class="mt-16 pt-8 border-t-2 border-gray-400 flex justify-between">
+            <div class="w-1/2">
+                <!-- Espace pour le cachet du client si nécessaire -->
+            </div>
+            <div class="w-1/2 text-center">
+                <p class="text-sm font-semibold text-gray-700 mb-6">Cachet et Signature du Fournisseur</p>
+                <!-- Space for signature and stamp, giving it a minimum height -->
+                <div class="h-24 pt-16 border-b border-gray-400 w-3/4 mx-auto text-xs text-gray-500">
+                    <!-- Placeholder for stamp area -->
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="no-print max-w-4xl mx-auto flex justify-end space-x-4 pb-10 mt-4">
+        <button id="save-order-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition duration-200">
+            Enregistrer la Commande
+        </button>
+        <button id="print-order-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition duration-200">
+            Imprimer / PDF
+        </button>
+    </div>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        setLogLevel('debug'); // Enable Firestore logs
+
+        // Global variables provided by the environment (MANDATORY USE)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- Core Firebase Initialization and Auth ---
+        if (firebaseConfig) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // 1. Listen for auth state changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('auth-status').textContent = `Authentifié (ID: ${userId})`;
+                    } else {
+                        // 2. Sign in using the token or anonymously
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("Firebase Sign-In Error:", error);
+                            document.getElementById('auth-status').textContent = `Erreur d'authentification: ${error.code}`;
+                        }
+                    }
+                    isAuthReady = true;
+                });
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+            }
+        } else {
+            document.getElementById('auth-status').textContent = "Firebase non configuré (Mode Local)";
+            isAuthReady = true; // Still allow local app logic to run
+        }
+
+
+        // --- Product Catalog Mock (Simulating Google Sheet Data Fetch) ---
+        // We still need the designations and units, even without prices.
+        const PRODUCT_CATALOG = [
+            { code: 'B9805Y0077', designation: 'ELIO II 1 L 900', unit: 'Palette' },
+            { code: 'B9805Y0079', designation: 'ELIO II RONDE 2 L', unit: 'Palette' },
+            { code: 'B9805Y0078', designation: 'ELIO II 5 L', unit: 'Palette' },
+            { code: 'B9850Y3020', designation: 'SKOR 1KG (1200)', unit: 'Palette' },
+            { code: 'A123456789', designation: 'HUILE DE TOURNESOL 5L', unit: 'Carton' },
+            { code: 'Z999999999', designation: 'PRODUIT TEST (1KG)', unit: 'Unité' },
+        ];
+        
+        // --- Utility Functions ---
+
+        function showMessage(message, type = 'success') {
+            const box = document.getElementById('message-box');
+            box.textContent = message;
+            box.className = `fixed top-4 right-4 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-300 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            box.classList.remove('hidden');
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 3000);
+        }
+
+        // --- Dynamic UI Rendering ---
+
+        function createProductSelect(selectedCode = '') {
+            const select = document.createElement('select');
+            select.className = 'input-text-area border p-2 code-select';
+            select.innerHTML = '<option value="">Choisir un code...</option>';
+            PRODUCT_CATALOG.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.code;
+                option.textContent = product.code;
+                if (product.code === selectedCode) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            return select;
+        }
+
+        function createRow(item = {}) {
+            const row = document.createElement('tr');
+            row.id = `row-${crypto.randomUUID()}`;
+
+            const product = PRODUCT_CATALOG.find(p => p.code === item.code) || {};
+            const initialQuantity = item.quantity || 0;
+            const initialUnit = product.unit || '';
+            const initialDesignation = product.designation || '';
+            
+            // Note: Removed price and total columns entirely
+            row.innerHTML = `
+                <td data-field="code"></td>
+                <td data-field="designation">${initialDesignation}</td>
+                <td data-field="unit" class="text-center">${initialUnit}</td>
+                <td data-field="quantity" class="text-center">
+                    <input type="number" value="${initialQuantity}" min="1" class="input-text-area text-center quantity-input border p-2" placeholder="0">
+                </td>
+                <td class="no-print text-center">
+                    <button class="remove-item-btn text-red-500 hover:text-red-700 transition duration-150">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 100 2v6a1 1 0 100-2V8z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </td>
+            `;
+
+            const codeCell = row.querySelector('td[data-field="code"]');
+            const selectElement = createProductSelect(item.code);
+            codeCell.appendChild(selectElement);
+
+            selectElement.addEventListener('change', (e) => handleProductChange(row, e.target.value));
+            // We only need to listen for quantity changes for saving, not calculating
+            row.querySelector('.quantity-input').addEventListener('input', () => {}); 
+            row.querySelector('.remove-item-btn').addEventListener('click', () => {
+                row.remove();
+            });
+
+            handleProductChange(row, item.code); // Initial population of designation/unit
+            return row;
+        }
+
+        function handleProductChange(row, code) {
+            const product = PRODUCT_CATALOG.find(p => p.code === code);
+            const unit = product ? product.unit : '';
+            const designation = product ? product.designation : '';
+            
+            row.querySelector('td[data-field="designation"]').textContent = designation;
+            row.querySelector('td[data-field="unit"]').textContent = unit;
+        }
+
+        // --- Data Extraction and Saving ---
+
+        function extractOrderData() {
+            const items = [];
+            document.querySelectorAll('#order-items-body tr').forEach(row => {
+                const code = row.querySelector('select').value;
+                const quantity = parseFloat(row.querySelector('.quantity-input').value);
+                const designation = row.querySelector('td[data-field="designation"]').textContent;
+                const unit = row.querySelector('td[data-field="unit"]').textContent;
+
+                if (code && quantity > 0) {
+                    items.push({
+                        code,
+                        designation,
+                        unit,
+                        quantity,
+                    });
+                }
+            });
+
+            return {
+                orderNumber: document.getElementById('order-number').textContent,
+                orderDate: document.getElementById('order-date').textContent,
+                client: {
+                    name: document.getElementById('client-name').value,
+                    address: document.getElementById('client-address').value,
+                    idFiscal: document.getElementById('client-id-fiscal').value,
+                    contact: document.getElementById('client-contact').value,
+                },
+                supplier: {
+                    name: document.querySelector('h1').textContent,
+                    idFiscal: document.getElementById('company-id-fiscal').textContent,
+                    articleImpot: document.getElementById('company-article-impot').textContent,
+                },
+                items,
+                // Totals section removed as per user request
+                createdAt: new Date().toISOString()
+            };
+        }
+
+        async function saveOrder() {
+            if (!isAuthReady || !userId) {
+                showMessage("Erreur: Authentification non prête. Veuillez attendre ou actualiser.", 'error');
+                return;
+            }
+            
+            const orderData = extractOrderData();
+            if (orderData.items.length === 0) {
+                showMessage("Veuillez ajouter au moins un article à la commande.", 'error');
+                return;
+            }
+
+            document.getElementById('loading-overlay').classList.remove('hidden');
+
+            try {
+                // Define the document path for private user data
+                const orderDocId = orderData.orderNumber.replace('/', '-').replace(' ', '_');
+                const docPath = `/artifacts/${appId}/users/${userId}/bon_de_commandes/${orderDocId}`;
+                await setDoc(doc(db, docPath), orderData);
+                
+                showMessage(`Commande ${orderData.orderNumber} enregistrée avec succès dans Firestore !`);
+
+            } catch (error) {
+                console.error("Error saving document to Firestore: ", error);
+                showMessage(`Échec de l'enregistrement: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        }
+
+        // --- Initialization & Event Listeners ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set current date
+            const today = new Date();
+            const dateString = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+            document.getElementById('order-date').textContent = dateString;
+            
+            // Initial rows based on the user's provided image
+            const itemBody = document.getElementById('order-items-body');
+            itemBody.appendChild(createRow({ code: 'B9805Y0077', quantity: 2 }));
+            itemBody.appendChild(createRow({ code: 'B9805Y0079', quantity: 8 }));
+            itemBody.appendChild(createRow({ code: 'B9805Y0078', quantity: 2 })); // Added missing item from the image
+            itemBody.appendChild(createRow({ code: 'B9850Y3020', quantity: 10 }));
+            
+            // Event listeners
+            document.getElementById('add-item-btn').addEventListener('click', () => {
+                document.getElementById('order-items-body').appendChild(createRow());
+            });
+
+            document.getElementById('print-order-btn').addEventListener('click', () => {
+                window.print();
+            });
+
+            document.getElementById('save-order-btn').addEventListener('click', saveOrder);
+        });
+
+    </script>
+</body>
+</html>
