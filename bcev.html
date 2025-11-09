@@ -90,20 +90,17 @@ function addRow() {
 
 function removeRow(btn) { btn.closest("tr").remove(); }
 
-async function genererNumeroBon() {
+function genererNumeroBon() {
   const fournisseur = document.getElementById("clientSelect").value;
-  const url = `${WEB_APP_URL}?fournisseur=${encodeURIComponent(fournisseur)}`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    if(data.numero) document.getElementById("numero").value = data.numero;
-    else alert("Erreur: " + (data.error || "Numéro introuvable"));
-  } catch(err) {
-    console.error(err);
-    alert("Erreur lors de la génération du numéro.");
-  }
+  const script = document.createElement('script');
+  script.src = `${WEB_APP_URL}?fournisseur=${fournisseur}&callback=handleNumero`;
+  document.body.appendChild(script);
 }
+
+function handleNumero(data) {
+  document.getElementById("numero").value = data.numero;
+}
+
 
 async function envoyerGoogleSheet() {
   const tbody = document.querySelector("#table tbody");
@@ -137,6 +134,7 @@ window.onload = () => {
 
 </body>
 </html>
+
 
 
 
