@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -138,7 +139,7 @@
   <div class="header">
     <div>
       <label for="clientSelect"><strong>Fournisseur :</strong></label><br>
-      <select id="clientSelect" onchange="changerFournisseur()" style="border:1px solid #ccc; padding:5px 8px; border-radius:4px;">
+      <select id="clientSelect" onchange="changerFournisseur()">
         <option value="kamel">TABBOU KAMEL</option>
         <option value="abdellah">TABBOU ABDELLAH</option>
       </select>
@@ -156,12 +157,12 @@
       <strong>SPA CEVITAL</strong><br>
       <div class="inline-input">
         <label>Bon N° :</label>
-        <button onclick="nouveauBon()">Nouveau bon</button>
+        <button onclick="genererNumeroBon()">Nouveau bon</button>
         <input type="text" id="numero" placeholder="Numéro BC">
       </div>
       <div class="inline-input">
         <label>Date :</label>
-        <input id="dateBon" type="date" value="">
+        <input id="dateBon" type="date">
       </div>
     </div>
   </div>
@@ -184,7 +185,6 @@
     <button onclick="newBon()">🆕 Nouveau bon</button>
     <button onclick="window.print()">🖨️ Imprimer / PDF</button>
     <button onclick="envoyerGoogleSheet()">💾 Enregistrer dans Google Sheets</button>
-
   </div>
 
 </div>
@@ -204,6 +204,7 @@ const produits = [
   { code: "B9806Y0029", nom: "EL MEDINA 900G" }
 ];
 
+// Gestion du fournisseur
 function changerFournisseur() {
   const select = document.getElementById("clientSelect").value;
   const infoDiv = document.getElementById("infoFournisseur");
@@ -227,6 +228,7 @@ function changerFournisseur() {
   }
 }
 
+// Gestion tableau
 function addRow() {
   const tbody = document.querySelector("#table tbody");
   const row = document.createElement("tr");
@@ -258,29 +260,26 @@ function updateFromName(input) {
   if (produit) row.querySelector(".code").value = produit.code;
 }
 
-function removeRow(btn) {
-  btn.closest("tr").remove();
-}
+function removeRow(btn) { btn.closest("tr").remove(); }
 
+// Nouveau bon
 function newBon() {
   document.querySelector("#table tbody").innerHTML = "";
   addRow();
-  document.getElementById("numBon").value = "";
-  document.getElementById("dateBon").value = "";
+  document.getElementById("numero").value = "";
+  document.getElementById("dateBon").value = new Date().toISOString().slice(0,10);
 }
 
+// DataList pour autocomplete
 document.body.insertAdjacentHTML("beforeend", `
   <datalist id="codes">${produits.map(p => `<option value="${p.code}">`).join("")}</datalist>
   <datalist id="noms">${produits.map(p => `<option value="${p.nom}">`).join("")}</datalist>
 `);
 
-window.onload = () => {
-  document.getElementById("dateBon").value = new Date().toISOString().slice(0,10);
-  addRow();
-};
+// Envoi vers Google Sheets
 async function envoyerGoogleSheet() {
   const fournisseur = document.getElementById("clientSelect").value;
-  const numero = document.getElementById("numBon").value;
+  const numero = document.getElementById("numero").value;
   const date = document.getElementById("dateBon").value;
 
   const produits = Array.from(document.querySelectorAll("#table tbody tr")).map(tr => ({
@@ -292,7 +291,7 @@ async function envoyerGoogleSheet() {
 
   const data = { fournisseur, numero, date, produits };
 
-  const url = "https://script.google.com/macros/s/AKfycbx3M2EARO_McuH8ahoJEARDkg3aqVfx-hDl4OFXIANukofmMO1IhctQtswahwlxemmVqA/exec";
+  const url = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Remplacer par ton Apps Script
 
   const res = await fetch(url, {
     method: "POST",
@@ -302,9 +301,11 @@ async function envoyerGoogleSheet() {
   if (res.ok) alert("✅ Bon enregistré dans Google Sheets !");
   else alert("❌ Erreur lors de l’enregistrement");
 }
-async function nouveauBon() {
-  const fournisseur = document.getElementById("fournisseur").value;
-  const url = "https://script.google.com/macros/s/AKfycbxw8N_aB4.../exec"; // ton lien /exec
+
+// Génération du numéro de bon automatique
+async function genererNumeroBon() {
+  const fournisseur = document.getElementById("clientSelect").value;
+  const url = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Remplacer par ton Apps Script
 
   try {
     const res = await fetch(`${url}?fournisseur=${encodeURIComponent(fournisseur)}`);
@@ -316,7 +317,11 @@ async function nouveauBon() {
   }
 }
 
-
+// Initialisation
+window.onload = () => {
+  document.getElementById("dateBon").value = new Date().toISOString().slice(0,10);
+  addRow();
+};
 </script>
 
 </body>
